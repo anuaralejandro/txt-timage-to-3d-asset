@@ -1,0 +1,35 @@
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+ComfyUI_windows_portable/python_embeded/
+
+# ComfyUI Heavy Binary Directories & Artifacts
+ComfyUI_windows_portable/ComfyUI/models/
+ComfyUI_windows_portable/ComfyUI/output/
+ComfyUI_windows_portable/ComfyUI/input/
+ComfyUI_windows_portable/ComfyUI/temp/
+ComfyUI_windows_portable/output/
+ComfyUI_windows_portable.7z
+7zr.exe
+
+# Environment variables & Local configuration
+.env
+*.env.local
+
+# IDE & OS Junk
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
+
+# Logs & Temporary Files
+*.log
+*.tmp
