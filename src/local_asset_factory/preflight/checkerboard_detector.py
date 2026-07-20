@@ -39,7 +39,7 @@ def detect_checkerboard(
     *,
     tile_size_range: Tuple[int, int] = (8, 64),
     confidence_threshold: float = 0.6,
-    min_affected_fraction: float = 0.08,
+    min_affected_fraction: float = 0.01,
 ) -> CheckerboardResult:
     """
     Detect a baked checkerboard background in an image.

@@ -11,6 +11,7 @@ from PIL import Image
 from local_asset_factory.preflight.alpha_detector import detect_alpha
 from local_asset_factory.preflight.checkerboard_detector import detect_checkerboard
 from local_asset_factory.preflight.preflight_runner import PreflightRunner
+from local_asset_factory.domain.enums import PreflightFailure
 
 
 # ---------------------------------------------------------------------------
@@ -23,10 +24,12 @@ def make_checkerboard_rgba(size: int = 256, tile_size: int = 16) -> Image.Image:
     for y in range(size):
         for x in range(size):
             tile = (y // tile_size + x // tile_size) % 2
-            val = 200 if tile == 0 else 60
-            arr[y, x, :3] = val
+            val = 240 if tile == 0 else 180
+            arr[y, x, 0] = val
+            arr[y, x, 1] = val
+            arr[y, x, 2] = val
             arr[y, x, 3] = 255  # all opaque — fake alpha
-    return Image.fromarray(arr, mode="RGBA")
+    return Image.fromarray(arr)
 
 
 def make_true_alpha_rgba(size: int = 256) -> Image.Image:
@@ -41,13 +44,13 @@ def make_true_alpha_rgba(size: int = 256) -> Image.Image:
                 arr[y, x] = [180, 120, 100, 255]   # skin color, opaque
             else:
                 arr[y, x] = [0, 0, 0, 0]            # transparent background
-    return Image.fromarray(arr, mode="RGBA")
+    return Image.fromarray(arr)
 
 
 def make_rgb_no_alpha(size: int = 256) -> Image.Image:
     """Plain RGB image — no alpha channel."""
     arr = np.full((size, size, 3), 200, dtype=np.uint8)
-    return Image.fromarray(arr, mode="RGB")
+    return Image.fromarray(arr)
 
 
 def make_uniform_background_rgba(size: int = 256, bg_color=(255, 255, 255)) -> Image.Image:
@@ -58,7 +61,7 @@ def make_uniform_background_rgba(size: int = 256, bg_color=(255, 255, 255)) -> I
     # Put a character-like region in the center
     cx, cy = size // 2, size // 2
     arr[cy-40:cy+40, cx-30:cx+30, :3] = [180, 120, 100]
-    return Image.fromarray(arr, mode="RGBA")
+    return Image.fromarray(arr)
 
 
 # ---------------------------------------------------------------------------
