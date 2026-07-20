@@ -1,0 +1,52 @@
+"""local_asset_factory — Hunyuan multiview character pipeline."""
+from .domain.models import (
+    ArtifactMeta,
+    AssetRequest,
+    CanonicalView,
+    CanonicalViewSet,
+    SemanticMask,
+    SemanticMaskSet,
+    GeometryRequest,
+    GeometryCandidate,
+    CandidateMetrics,
+    SelectedGeometry,
+    Part3D,
+    PartSet,
+    TopologyResult,
+    UVResult,
+    BakeResult,
+    TextureResult,
+    RigResult,
+    AnimationQAResult,
+    AnimationQASuite,
+    LODResult,
+    ExportResult,
+    PipelineManifest,
+    PreflightResult,
+)
+from .domain.enums import (
+    ViewOrientation,
+    PartClass,
+    PipelineStage,
+    StageStatus,
+    PaintMode,
+    MobileProfile,
+    CameraType,
+    OmniControlType,
+    RigMethod,
+    PreflightFailure,
+    SeverityLevel,
+)
+
+__version__ = "0.1.0"
+__all__ = [
+    "ArtifactMeta", "AssetRequest", "CanonicalView", "CanonicalViewSet",
+    "SemanticMask", "SemanticMaskSet", "GeometryRequest", "GeometryCandidate",
+    "CandidateMetrics", "SelectedGeometry", "Part3D", "PartSet",
+    "TopologyResult", "UVResult", "BakeResult", "TextureResult",
+    "RigResult", "AnimationQAResult", "AnimationQASuite", "LODResult",
+    "ExportResult", "PipelineManifest", "PreflightResult",
+    "ViewOrientation", "PartClass", "PipelineStage", "StageStatus",
+    "PaintMode", "MobileProfile", "CameraType", "OmniControlType",
+    "RigMethod", "PreflightFailure", "SeverityLevel",
+]

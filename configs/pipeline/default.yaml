@@ -1,0 +1,184 @@
+---
+# Pipeline configuration for local character factory
+# RTX 4070 Laptop — 8GB VRAM sequential execution
+
+pipeline:
+  artifact_base_dir: "artifacts"
+  license_mode: "private_noncommercial_research"
+  allow_partial_success: true
+
+vram:
+  total_mb: 8192
+  safety_headroom_mb: 512
+  sequential_only: true   # NEVER run two ML services simultaneously
+
+preflight:
+  require_true_alpha_or_uniform_background: true
+  reject_baked_checkerboard: true
+  checkerboard_confidence_threshold: 0.55
+  require_front: true
+  require_left: true
+  require_back: true
+  right_view_policy: "validation"   # "validation" | "optional" | "required"
+  max_shoulder_angle_error_deg: 5.0
+  max_elbow_flexion_deg: 7.0
+  min_resolution: 512
+  max_background_fraction: 0.50
+
+canonical_views:
+  target_size: [1024, 1024]
+  background: "transparent"    # "transparent" | "white" | "uniform"
+  pad_fraction: 0.05
+
+sam3:
+  checkpoint: "facebook/sam3.1-hiera-large"
+  # Use smaller model if VRAM is tight
+  # checkpoint: "facebook/sam3.1-hiera-base-plus"
+  confidence_threshold: 0.5
+  min_area_px: 100
+  required_vram_mb: 3000
+
+hunyuan_2mv:
+  checkpoint: "tencent/Hunyuan3D-2mv"
+  subfolder_normal: "hunyuan3d-dit-v2-mv"
+  subfolder_turbo: "hunyuan3d-dit-v2-mv-turbo"
+  seeds: [11, 29, 47, 83]
+  steps: [30, 40]
+  variants: ["normal", "turbo"]
+  timeout_seconds: 600
+  required_vram_mb: 6000
+  # Note: right view is NEVER fed to checkpoint
+  # capabilities().supported_views = [front, left, back]
+
+hunyuan_omni:
+  checkpoint: "Tencent-Hunyuan/Hunyuan3D-Omni"
+  mvp_control: "pose"
+  seeds: [11, 29]
+  steps: [30]
+  required_vram_mb: 6000
+  character_proportions:
+    total_heads: 4.5
+    head_height_ratio: 0.32
+    shoulder_width_ratio: 0.28
+    arm_abduction_deg: 90.0
+    elbow_flexion_deg: 0.0
+    leg_separation_ratio: 0.12
+
+scoring:
+  render_views: ["front", "left", "back", "right", "front_3q", "back_3q", "top"]
+  render_turntable: true
+  weights:
+    semantic_part_iou: 0.25
+    silhouette_iou: 0.20
+    keypoint_error: 0.15
+    pose_accuracy: 0.15
+    mesh_health: 0.10
+    part_separability: 0.10
+    surface_noise: 0.05
+  gates:
+    min_silhouette_iou: 0.40
+    max_non_manifold_edges: 500
+    max_degenerate_faces: 100
+    min_arm_separation: 0.1
+    min_leg_separation: 0.1
+
+hunyuan_part:
+  checkpoint: "Tencent-Hunyuan/Hunyuan3D-Part"
+  required_vram_mb: 4000
+  use_p3sam: true
+  use_xpart: true
+
+topology:
+  templates:
+    normal_anime:
+      body_triangles: 8000
+      head_triangles: 3000
+    chibi_4_heads:
+      body_triangles: 5000
+      head_triangles: 4500
+    chibi_5_heads:
+      body_triangles: 6000
+      head_triangles: 4000
+  joint_loops:
+    - neck
+    - shoulder
+    - armpit
+    - elbow
+    - wrist
+    - pelvis
+    - groin
+    - knee
+    - ankle
+  tools:
+    primary: "autoremesher"
+    fallback: "quadriflow"
+    hardsurface: "openvdb"
+
+hunyuan_paint:
+  checkpoint: "Tencent-Hunyuan/Hunyuan3D-2.1"
+  required_vram_mb: 6000
+  modes:
+    toon_mobile:
+      max_materials: 2
+      roughness_simple: true
+      outline_mask: true
+    pbr_mobile:
+      max_materials: 2
+      roughness_simple: false
+      outline_mask: false
+
+rigging:
+  riganything_enabled: false   # non-commercial only
+  rigify_fallback: true
+  project_skeleton: "character_humanoid_v1"
+  max_influences: 4
+  max_deform_bones: 75
+  weight_normalization: true
+  add_ponytail_bones: true
+  add_skirt_bones: true
+
+animation_qa:
+  animations:
+    - idle
+    - walk
+    - run
+    - jump
+    - crouch
+    - arms_up
+    - arms_forward
+    - elbow_bend
+    - deep_knee_bend
+    - torso_twist
+  blocking_failures:
+    - unweighted_vertices
+    - severe_penetration
+    - detached_parts
+
+mobile:
+  profiles:
+    android_low:
+      lod0: 16000
+      lod1: 8000
+      lod2: 3500
+      lod3: 1200
+      texture: 1024
+    android_mid:
+      lod0: 28000
+      lod1: 14000
+      lod2: 6500
+      lod3: 2200
+      texture: 2048
+  max_materials: 2
+  max_vertex_influences: 4
+  max_deform_bones: 75
+  compression: "ktx2"
+
+export:
+  gltf_validator: true
+  blender_reimport: true
+  generate_turntable: true
+  turntable_fps: 30
+  turntable_frames: 120
+  scale: 1.0
+  forward_axis: "-Z"
+  up_axis: "Y"

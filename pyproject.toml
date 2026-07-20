@@ -1,0 +1,65 @@
+[project]
+name = "local-asset-factory"
+version = "0.1.0"
+description = "Local 3D character factory — Hunyuan multiview pipeline"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "private-noncommercial-research" }
+
+dependencies = [
+    "pydantic>=2.0",
+    "Pillow>=10.0",
+    "numpy>=1.24",
+    "httpx>=0.24",
+    "structlog>=23.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio",
+    "ruff",
+    "mypy",
+]
+preflight = [
+    "scipy>=1.10",   # optional for better checkerboard detection
+]
+blender = [
+    # Blender's own Python — these are available inside Blender scripts
+    # bpy is not installable via pip normally
+]
+
+[project.scripts]
+asset-factory = "local_asset_factory.cli:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "gpu: requires GPU and ML models (skip in CI)",
+    "integration: integration test requiring real services",
+    "golden: full golden pipeline test",
+    "unit: fast unit test (no GPU, no network)",
+]
+addopts = "-v --tb=short"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
