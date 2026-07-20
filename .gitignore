@@ -7,13 +7,16 @@ __pycache__/
 env/
 venv/
 ENV/
-ComfyUI_windows_portable/python_embeded/
 
-# ComfyUI Heavy Binary Directories & Artifacts
+# ComfyUI Heavy Binary Directories & Portable Python
+ComfyUI_windows_portable/python_embeded/
 ComfyUI_windows_portable/ComfyUI/models/
 ComfyUI_windows_portable/ComfyUI/output/
 ComfyUI_windows_portable/ComfyUI/input/
 ComfyUI_windows_portable/ComfyUI/temp/
+ComfyUI_windows_portable/ComfyUI/user/
+ComfyUI_windows_portable/ComfyUI/custom_nodes/*
+!ComfyUI_windows_portable/ComfyUI/custom_nodes/ComfyUI-LocalAssetFactory/
 ComfyUI_windows_portable/output/
 ComfyUI_windows_portable.7z
 7zr.exe
