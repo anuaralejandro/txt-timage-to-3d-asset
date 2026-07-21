@@ -1,79 +1,41 @@
 """
 local_asset_factory · preflight · preflight_runner
 Orchestrates all preflight checks for a view or view set.
-
-Gates:
-  alpha:
-    require_true_alpha_or_uniform_background: true
-  checkerboard:
-    reject_baked_pattern: true
-  pose:
-    max_shoulder_angle_error_deg: 5
-    max_elbow_flexion_deg: 7
-  multiview:
-    require_front: true
-    require_left: true
-    require_back: true
-    right_view_policy: validation
-
-CLI usage:
-    asset-factory preflight input/front.png
-    asset-factory validate-views views.yaml
 """
 from __future__ import annotations
 
 import logging
 from pathlib import Path
 from typing import Dict, List, Optional
-
+import numpy as np
 from PIL import Image
 
 from ..domain.enums import PreflightFailure, SeverityLevel
 from ..domain.models import PreflightCheck, PreflightResult
 from .alpha_detector import detect_alpha
 from .checkerboard_detector import detect_checkerboard
+from ..multiview.image_alignment import detect_extremities, validate_t_pose
 
 log = logging.getLogger(__name__)
 
-
 class PreflightConfig:
-    """Preflight gate configuration."""
     require_true_alpha_or_uniform_background: bool = True
     reject_baked_checkerboard: bool = True
     require_front: bool = True
     require_left: bool = True
     require_back: bool = True
-    right_view_policy: str = "validation"    # "validation" | "optional" | "required"
-    max_shoulder_angle_error_deg: float = 5.0
-    max_elbow_flexion_deg: float = 7.0
+    right_view_policy: str = "validation"
+    min_span_ratio: float = 0.6
     min_resolution: int = 512
-    max_background_fraction: float = 0.50
     checkerboard_confidence_threshold: float = 0.55
-
 
 DEFAULT_CONFIG = PreflightConfig()
 
-
 class PreflightRunner:
-    """
-    Runs all preflight checks on a single image or a set of views.
-    Returns structured results with severity levels.
-    Failures with severity FATAL block the pipeline.
-    """
-
     def __init__(self, config: Optional[PreflightConfig] = None):
         self.config = config or DEFAULT_CONFIG
 
-    def check_image(
-        self,
-        image_path: str | Path,
-        job_id: str = "unknown",
-        view_orientation: str = "front",
-    ) -> PreflightResult:
-        """
-        Run all applicable checks on a single image file.
-        Returns PreflightResult with all check outcomes.
-        """
+    def check_image(self, image_path: str | Path, job_id: str = "unknown", view_orientation: str = "front") -> PreflightResult:
         path = Path(image_path)
         result = PreflightResult(job_id=job_id, view=view_orientation)
         checks: List[PreflightCheck] = []
@@ -90,8 +52,7 @@ class PreflightRunner:
             return result
 
         try:
-            img = Image.open(path)
-            img.load()
+            img = Image.open(path).convert("RGBA")
         except Exception as e:
             checks.append(PreflightCheck(
                 check=PreflightFailure.SUBJECT_CROPPED,
@@ -103,11 +64,8 @@ class PreflightRunner:
             result.passed = False
             return result
 
-        # --- Check 1: Checkerboard background ---
-        checker_result = detect_checkerboard(
-            img,
-            confidence_threshold=self.config.checkerboard_confidence_threshold,
-        )
+        # Alpha and Background
+        checker_result = detect_checkerboard(img, confidence_threshold=self.config.checkerboard_confidence_threshold)
         if self.config.reject_baked_checkerboard:
             checks.append(PreflightCheck(
                 check=PreflightFailure.BAKED_CHECKERBOARD_BACKGROUND,
@@ -116,10 +74,8 @@ class PreflightRunner:
                 severity=SeverityLevel.FATAL if checker_result.detected else SeverityLevel.INFO,
             ))
 
-        # --- Check 2: Alpha channel quality ---
         alpha_result = detect_alpha(img)
         if self.config.require_true_alpha_or_uniform_background:
-            # Fail if: has RGBA but no true alpha (baked checkerboard scenario)
             if alpha_result.has_alpha_channel and not alpha_result.true_alpha:
                 checks.append(PreflightCheck(
                     check=PreflightFailure.NO_TRUE_ALPHA,
@@ -135,7 +91,7 @@ class PreflightRunner:
                     severity=SeverityLevel.INFO,
                 ))
 
-        # --- Check 3: Resolution ---
+        # Resolution
         w, h = img.size
         if min(w, h) < self.config.min_resolution:
             checks.append(PreflightCheck(
@@ -145,24 +101,63 @@ class PreflightRunner:
                 severity=SeverityLevel.ERROR,
             ))
 
+        # Anatomy / T-pose Check (especially for front and back)
+        if view_orientation in ("front", "back"):
+            arr = np.array(img)
+            alpha_arr = arr[:, :, 3]
+            ext = detect_extremities(alpha_arr)
+            if ext is None:
+                checks.append(PreflightCheck(
+                    check=PreflightFailure.SUBJECT_CROPPED,
+                    passed=False,
+                    message="No subject detected in alpha channel",
+                    severity=SeverityLevel.FATAL,
+                ))
+            else:
+                is_t_pose, ratio = validate_t_pose(ext, w, h)
+                checks.append(PreflightCheck(
+                    check=PreflightFailure.POOR_POSE_ALIGNMENT,
+                    passed=ratio >= self.config.min_span_ratio,
+                    message=f"T-pose span ratio {ratio:.2f} (threshold {self.config.min_span_ratio})",
+                    severity=SeverityLevel.ERROR if ratio < self.config.min_span_ratio else SeverityLevel.INFO,
+                ))
+                
+                # Check for cropped limits
+                if ext["head_top"][1] <= 2:
+                    checks.append(PreflightCheck(
+                        check=PreflightFailure.SUBJECT_CROPPED,
+                        passed=False,
+                        message="Head is cropped at the top",
+                        severity=SeverityLevel.ERROR,
+                    ))
+                if ext["feet_bottom"][1] >= h - 3:
+                    checks.append(PreflightCheck(
+                        check=PreflightFailure.SUBJECT_CROPPED,
+                        passed=False,
+                        message="Feet are cropped at the bottom",
+                        severity=SeverityLevel.ERROR,
+                    ))
+                if ext["arm_left"][0] <= 2:
+                    checks.append(PreflightCheck(
+                        check=PreflightFailure.SUBJECT_CROPPED,
+                        passed=False,
+                        message="Left arm is cropped",
+                        severity=SeverityLevel.ERROR,
+                    ))
+                if ext["arm_right"][0] >= w - 3:
+                    checks.append(PreflightCheck(
+                        check=PreflightFailure.SUBJECT_CROPPED,
+                        passed=False,
+                        message="Right arm is cropped",
+                        severity=SeverityLevel.ERROR,
+                    ))
+
         result.checks = checks
-        result.passed = all(c.passed for c in checks if c.severity in (
-            SeverityLevel.ERROR, SeverityLevel.FATAL
-        ))
+        result.passed = all(c.passed for c in checks if c.severity in (SeverityLevel.ERROR, SeverityLevel.FATAL))
         return result
 
-    def validate_view_set(
-        self,
-        views: Dict[str, str],
-        job_id: str = "unknown",
-    ) -> List[PreflightResult]:
-        """
-        Validate a complete view set.
-        Returns one PreflightResult per view.
-        """
-        results: List[PreflightResult] = []
-
-        # Check required views present
+    def validate_view_set(self, views: Dict[str, str], job_id: str = "unknown") -> List[PreflightResult]:
+        results = []
         missing = []
         if self.config.require_front and "front" not in views:
             missing.append("front")
@@ -175,44 +170,36 @@ class PreflightRunner:
 
         if missing:
             dummy = PreflightResult(job_id=job_id, view="view_set")
-            dummy.checks = [
-                PreflightCheck(
-                    check=PreflightFailure.INCONSISTENT_VIEWS,
-                    passed=False,
-                    message=f"Missing required views: {missing}",
-                    severity=SeverityLevel.FATAL,
-                )
-            ]
+            dummy.checks = [PreflightCheck(
+                check=PreflightFailure.INCONSISTENT_VIEWS,
+                passed=False,
+                message=f"Missing required views: {missing}",
+                severity=SeverityLevel.FATAL,
+            )]
             dummy.passed = False
             results.append(dummy)
             return results
 
-        # Check for duplicate views (by hash)
-        seen_hashes: Dict[str, str] = {}
+        # Deduplication
+        seen_hashes = {}
+        import hashlib
         for orientation, path in views.items():
             p = Path(path)
             if p.exists():
-                import hashlib
                 h = hashlib.md5(p.read_bytes()).hexdigest()[:12]
                 if h in seen_hashes:
                     dup_result = PreflightResult(job_id=job_id, view=orientation)
-                    dup_result.checks = [
-                        PreflightCheck(
-                            check=PreflightFailure.DUPLICATE_VIEWS,
-                            passed=False,
-                            message=(
-                                f"View '{orientation}' appears to be identical to "
-                                f"view '{seen_hashes[h]}' (same image hash)."
-                            ),
-                            severity=SeverityLevel.ERROR,
-                        )
-                    ]
+                    dup_result.checks = [PreflightCheck(
+                        check=PreflightFailure.DUPLICATE_VIEWS,
+                        passed=False,
+                        message=f"View '{orientation}' is identical to '{seen_hashes[h]}'",
+                        severity=SeverityLevel.ERROR,
+                    )]
                     dup_result.passed = False
                     results.append(dup_result)
                 else:
                     seen_hashes[h] = orientation
 
-        # Check each view individually
         for orientation, path in views.items():
             r = self.check_image(path, job_id=job_id, view_orientation=orientation)
             results.append(r)

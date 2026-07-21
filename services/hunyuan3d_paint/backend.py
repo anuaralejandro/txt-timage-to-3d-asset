@@ -3,10 +3,6 @@ Hunyuan3D-Paint Service Backend (2D/3D Multi-View Texturing).
 
 Uses Tencent-Hunyuan/Hunyuan3D-2.1 to generate high-quality UV texture maps
 for low-poly recomposed character meshes.
-
-Modes:
-  toon_mobile  — Max 2 materials, clean toon shading, outline mask support
-  pbr_mobile   — BaseColor, Normal, Roughness (simplified)
 """
 from __future__ import annotations
 
@@ -15,9 +11,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional
-
-from local_asset_factory.domain.enums import PaintMode
+from typing import Any, Dict, List, Optional
 
 log = logging.getLogger(__name__)
 
@@ -37,13 +31,14 @@ class HunyuanPaintBackend:
     Backend service wrapper for Hunyuan3D-Paint texture generation.
     """
 
-    def __init__(self, checkpoint: str = CHECKPOINT_NAME):
+    def __init__(self, checkpoint: str = CHECKPOINT_NAME, enabled: bool = False):
         self.checkpoint = checkpoint
+        self.enabled = enabled
         self._model = None
 
     def healthcheck(self) -> Dict[str, Any]:
         return {
-            "status": "healthy",
+            "status": "healthy" if self.enabled else "disabled",
             "checkpoint": self.checkpoint,
             "vram_mb": REQUIRED_VRAM_MB,
         }
@@ -65,33 +60,18 @@ class HunyuanPaintBackend:
         Generate UV texture atlas for mesh using views reference.
         """
         start_t = time.time()
-        mesh_p = Path(mesh_path)
-        out_d = Path(output_dir)
-        out_d.mkdir(parents=True, exist_ok=True)
+        
+        if not self.enabled:
+            return {
+                "status": "unsupported_on_current_hardware",
+                "message": "Paint pipeline is disabled for current hardware configuration.",
+                "runtime_seconds": time.time() - start_t,
+            }
 
-        tex_path = out_d / "base_color.png"
-        norm_path = out_d / "normal.png"
-
-        # Mock texture generator outputs
-        tex_path.write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x01\x00\x00\x00\x01\x00\x08\x06\x00\x00\x00\x5c\x72\xa8\x66")
-        norm_path.write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x01\x00\x00\x00\x01\x00\x08\x06\x00\x00\x00\x5c\x72\xa8\x66")
-
-        meta_file = out_d / "paint_meta.json"
-        meta_data = {
-            "job_id": job_id,
-            "paint_mode": paint_mode,
-            "resolution": resolution,
-            "textures": {
-                "base_color": str(tex_path),
-                "normal": str(norm_path),
-            },
-            "runtime_seconds": time.time() - start_t,
-        }
-        meta_file.write_text(json.dumps(meta_data, indent=2), encoding="utf-8")
-
+        # The actual integration would go here if hardware permits it.
+        # But we do not generate fake mock images anymore.
         return {
-            "status": "success",
-            "base_color": str(tex_path),
-            "normal": str(norm_path),
+            "status": "unsupported_on_current_hardware",
+            "message": "Full Hunyuan Paint 2.1 is currently disabled in this environment.",
             "runtime_seconds": time.time() - start_t,
         }

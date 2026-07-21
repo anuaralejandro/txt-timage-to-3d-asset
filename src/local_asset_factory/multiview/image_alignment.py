@@ -2,8 +2,7 @@
 local_asset_factory · multiview · image_alignment
 Joint anatomical registration and validation for Multiview images.
 """
-
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, Any
 import numpy as np
 from PIL import Image
 
@@ -45,20 +44,18 @@ def validate_t_pose(extremities: Dict[str, Tuple[int, int]], width: int, height:
         return False, 0.0
         
     ratio = arm_span / body_height
-    # A human T-pose typically has arm span ~ body height. Anime characters might have larger heads.
-    # We expect ratio > 0.6 for a valid T-pose (A-pose or T-pose).
     is_t_pose = ratio > 0.6
     return is_t_pose, ratio
 
-def calculate_joint_registration(views: Dict[str, Image.Image]) -> Dict[str, Dict]:
+def calculate_joint_registration(views: Dict[str, Image.Image], pad_fraction: float = 0.05) -> Dict[str, Any]:
     """
     Calculates a joint bounding box and scale to normalize all views consistently.
+    Outputs the global center_y, scale factor, and crops for each image.
     """
     stats = {}
     max_height = 0
-    max_center_y = 0
+    max_width = 0
     
-    # Extract extremities for each view
     for name, img in views.items():
         arr = np.array(img.convert("RGBA"))
         alpha = arr[:, :, 3]
@@ -68,35 +65,76 @@ def calculate_joint_registration(views: Dict[str, Image.Image]) -> Dict[str, Dic
             stats[name] = {"valid": False}
             continue
             
-        height = ext["feet_bottom"][1] - ext["head_top"][1]
+        h = ext["feet_bottom"][1] - ext["head_top"][1]
+        w = ext["arm_right"][0] - ext["arm_left"][0]
         center_y = (ext["feet_bottom"][1] + ext["head_top"][1]) / 2
+        center_x = (ext["arm_right"][0] + ext["arm_left"][0]) / 2
         
-        if height > max_height:
-            max_height = height
+        max_height = max(max_height, h)
+        max_width = max(max_width, w)
         
         is_t_pose, ratio = validate_t_pose(ext, img.width, img.height)
         
         stats[name] = {
             "valid": True,
             "extremities": ext,
-            "height": height,
+            "height": h,
+            "width": w,
+            "center_x": center_x,
             "center_y": center_y,
             "is_t_pose": is_t_pose,
             "span_ratio": ratio
         }
     
-    # Calculate crop boxes to align centers and scale
     registration = {}
     for name, stat in stats.items():
         if not stat["valid"]:
             registration[name] = None
             continue
             
-        # Target bounding box based on global max_height
-        # to ensure all views have the exact same pixel-to-meter scale
+        # Target bounding box based on global max_height and max_width
+        # We need a square that fits the global max dimension with padding
+        global_max_dim = max(max_height, max_width)
+        padded_dim = int(global_max_dim * (1 + pad_fraction * 2))
+        
+        cx = stat["center_x"]
+        cy = stat["center_y"]
+        
+        # Calculate cropping boundaries (could be out of image bounds)
+        x0 = int(cx - padded_dim / 2)
+        y0 = int(cy - padded_dim / 2)
+        x1 = int(cx + padded_dim / 2)
+        y1 = int(cy + padded_dim / 2)
+        
         registration[name] = {
-            "target_height": max_height,
-            "t_pose_valid": stat["is_t_pose"]
+            "valid": True,
+            "crop_box": (x0, y0, x1, y1),
+            "t_pose_valid": stat["is_t_pose"],
+            "span_ratio": stat["span_ratio"],
+            "padded_dim": padded_dim
         }
         
     return registration
+
+def apply_joint_registration(img: Image.Image, reg: Dict, target_size: Tuple[int, int]) -> Image.Image:
+    """Applies the joint registration crop and resizes."""
+    x0, y0, x1, y1 = reg["crop_box"]
+    padded_dim = reg["padded_dim"]
+    
+    # Create a blank square canvas of padded_dim
+    canvas = Image.new("RGBA", (padded_dim, padded_dim), (0, 0, 0, 0))
+    
+    # Calculate overlap
+    src_x0 = max(0, x0)
+    src_y0 = max(0, y0)
+    src_x1 = min(img.width, x1)
+    src_y1 = min(img.height, y1)
+    
+    dest_x0 = src_x0 - x0
+    dest_y0 = src_y0 - y0
+    
+    if src_x1 > src_x0 and src_y1 > src_y0:
+        crop = img.crop((src_x0, src_y0, src_x1, src_y1))
+        canvas.paste(crop, (dest_x0, dest_y0))
+        
+    return canvas.resize(target_size, Image.LANCZOS)

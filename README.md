@@ -11,7 +11,7 @@ Sistema local de generación de assets 3D optimizados para videojuegos utilizand
 - **100% Local-First**: Sin necesidad de servicios en la nube ni costos por API externa.
 - **Arquitectura Basada en Nodos ComfyUI**: Pipeline modular mediante el paquete custom node `ComfyUI-LocalAssetFactory`.
 - **Integración con Ollama**: Generación automática de especificaciones técnicas y prompts optimizados a partir de breves descripciones en español.
-- **Hunyuan3D-2 Multi-View / Single-View**: Generación de mallas 3D de alta calidad a partir de conceptos 2D o imágenes en Pose-T (front, left, back, right).
+- **Hunyuan3D-2 Multi-View / Single-View**: Generación de mallas 3D base coherentes a partir de conceptos 2D o imágenes en Pose-T (front, left, back, right). *Nota: Genera geometría base editable, no un asset riggeado ni game-ready automático.*
 - **Procesamiento Automatizado en Blender**: Optimización de presupuesto de polígonos (decimación), asignación de texturas, UV unwrapping y exportación de archivos `.glb`.
 - **Previsualizador 3D Integrado**: Canvas WebGL interactivo directo dentro de la interfaz de ComfyUI.
 - **Generación de Reporte Manifest**: Salida con metadatos completos `manifest.json`.

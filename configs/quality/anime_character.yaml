@@ -1,0 +1,22 @@
+preflight:
+  require_true_alpha_or_uniform_background: true
+  reject_baked_checkerboard: true
+  require_front: true
+  require_left: true
+  require_back: true
+  right_view_policy: optional
+  pose:
+    min_span_ratio: 0.6
+  visibility:
+    head: true
+    arms: 2
+    legs: 2
+
+scoring:
+  gates:
+    min_vertices: 1000
+    min_faces: 1000
+    main_component_face_ratio: 0.85
+    finite_vertices_ratio: 1.0
+    silhouette_iou_mean: 0.45
+    silhouette_iou_front: 0.55

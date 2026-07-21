@@ -1,0 +1,11 @@
+mode: turbo
+backend: hunyuan3d_2mv
+checkpoint: tencent/Hunyuan3D-2mv
+subfolder: hunyuan3d-dit-v2-mv-turbo
+num_inference_steps: 10
+guidance_scale: 1.0
+octree_resolution: 380
+num_chunks: 20000
+output_type: trimesh
+low_vram_mode: true
+enable_cpu_offload: true

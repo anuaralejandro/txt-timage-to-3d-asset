@@ -17,6 +17,7 @@ Load model → inference → unload before next service.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
@@ -45,7 +46,6 @@ class Capabilities:
     """
     Reports what this backend actually supports.
     Callers MUST check supported_views before feeding data.
-    Per official Hunyuan3D-2mv docs, only front/left/back are documented.
     """
     supported_views: List[str] = field(default_factory=lambda: ["front", "left", "back"])
     supported_variants: List[str] = field(default_factory=lambda: ["normal", "turbo"])
@@ -63,25 +63,14 @@ class Capabilities:
 class Hunyuan2MVBackend:
     """
     Interface to Hunyuan3D-2mv for multiview character reconstruction.
-
-    Design rules:
-    - capabilities() is ALWAYS called before generate() by the pipeline.
-    - Only views listed in capabilities().supported_views are fed to the model.
-    - right view is NEVER fed to the model (QA only).
-    - Each raw mesh is saved without modification.
-    - OOM errors are caught and reported as status="error_vram".
     """
-
-    CHECKPOINT = "tencent/Hunyuan3D-2mv"
-    SUBFOLDER_NORMAL = "hunyuan3d-dit-v2-mv"
-    SUBFOLDER_TURBO = "hunyuan3d-dit-v2-mv-turbo"
-
     def __init__(self, model_cache_dir: Optional[str] = None):
         self._model = None
         self._model_cache_dir = model_cache_dir or os.environ.get(
             "HF_HOME", str(Path.home() / ".cache" / "huggingface")
         )
         self._loaded_variant: Optional[str] = None
+        self._loaded_checkpoint: Optional[str] = None
 
     # ------------------------------------------------------------------
     # Health and capabilities
@@ -108,52 +97,53 @@ class Hunyuan2MVBackend:
         return status
 
     def capabilities(self) -> Capabilities:
-        """
-        Return capabilities of this backend.
-        Pipeline MUST call this before generate() to know supported_views.
-        """
-        return Capabilities(
-            supported_views=["front", "left", "back"],
-            supported_variants=["normal", "turbo"],
-            required_vram_mb=6000,
-            supported_output_formats=["glb", "obj"],
-            checkpoint=self.CHECKPOINT,
-            subfolder=self.SUBFOLDER_NORMAL,
-            max_parallel_candidates=1,
-        )
+        return Capabilities()
 
     # ------------------------------------------------------------------
     # Model lifecycle
     # ------------------------------------------------------------------
 
-    def _load_model(self, variant: str = "normal") -> None:
+    def _load_model(self, checkpoint: str, variant: str, attention_backend: str, enable_cpu_offload: bool) -> None:
         """
         Load the Hunyuan3D-2mv model into GPU memory.
-        Call only when VRAM slot is held.
         """
-        if self._model is not None and self._loaded_variant == variant:
+        if self._model is not None and self._loaded_variant == variant and self._loaded_checkpoint == checkpoint:
             return  # already loaded
 
-        subfolder = (
-            self.SUBFOLDER_TURBO if variant == "turbo" else self.SUBFOLDER_NORMAL
-        )
-        log.info("Loading Hunyuan3D-2mv %s from %s/%s", variant, self.CHECKPOINT, subfolder)
+        subfolder = "hunyuan3d-dit-v2-mv-turbo" if variant == "turbo" else "hunyuan3d-dit-v2-mv"
+        log.info("Loading Hunyuan3D-2mv %s from %s/%s", variant, checkpoint, subfolder)
 
         try:
-            # Import deferred: only when actually running
             from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline  # type: ignore
+            import torch
+            
             self._model = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
-                self.CHECKPOINT,
+                checkpoint,
                 subfolder=subfolder,
                 cache_dir=self._model_cache_dir,
+                torch_dtype=torch.float16,
             )
-            self._model.enable_flashattn()  # memory efficiency
+            
+            if attention_backend == "flash_attn":
+                try:
+                    self._model.enable_flashattn()
+                except Exception as e:
+                    log.warning("Flash Attention not available: %s", e)
+            
+            if enable_cpu_offload:
+                try:
+                    self._model.enable_model_cpu_offload()
+                except AttributeError:
+                    log.warning("Model CPU offload not supported by pipeline version")
+            else:
+                self._model.to("cuda")
+
             self._loaded_variant = variant
+            self._loaded_checkpoint = checkpoint
             log.info("Hunyuan3D-2mv loaded (%s variant)", variant)
         except ImportError as e:
             raise RuntimeError(
-                f"Hunyuan3D-2mv dependencies not installed: {e}. "
-                "Install hy3dgen in env-hunyuan2mv (separate from ComfyUI python)."
+                f"Hunyuan3D-2mv dependencies not installed: {e}."
             ) from e
 
     def _unload_model(self) -> None:
@@ -162,9 +152,12 @@ class Hunyuan2MVBackend:
             del self._model
             self._model = None
             self._loaded_variant = None
+            self._loaded_checkpoint = None
         try:
             import torch
             torch.cuda.empty_cache()
+            import gc
+            gc.collect()
         except ImportError:
             pass
         log.info("Hunyuan3D-2mv unloaded")
@@ -177,35 +170,25 @@ class Hunyuan2MVBackend:
         self,
         views: Dict[str, str],
         *,
+        model_id: str = "tencent/Hunyuan3D-2mv",
+        model_variant: str = "normal",
         seed: int = 11,
-        steps: int = 30,
-        variant: str = "normal",
+        num_inference_steps: int = 30,
+        guidance_scale: float = 7.0,
+        octree_resolution: int = 380,
+        num_chunks: int = 20000,
+        output_type: str = "trimesh",
+        device: str = "cuda",
+        dtype: str = "float16",
+        low_vram_mode: bool = True,
+        enable_cpu_offload: bool = True,
+        attention_backend: str = "flash_attn",
         output_dir: str,
         job_id: str,
         timeout_seconds: int = 600,
     ) -> Dict[str, Any]:
         """
         Generate a single raw mesh from multiview images.
-
-        Args:
-            views: {orientation: absolute_path} — ONLY checkpoint-supported views.
-                   Pipeline must have called capabilities() to filter views.
-                   right view must NOT be in this dict.
-            seed: RNG seed
-            steps: inference steps (30 or 40)
-            variant: "normal" | "turbo"
-            output_dir: directory to write raw mesh
-            job_id: pipeline job identifier
-            timeout_seconds: hard timeout
-
-        Returns:
-            dict with:
-                status: "success" | "error_vram" | "error: ..."
-                mesh_path: path to saved GLB (raw, unmodified)
-                runtime_seconds: float
-                peak_vram_mb: int
-                seed: int
-                variant: str
         """
         result = {
             "status": "pending",
@@ -213,64 +196,97 @@ class Hunyuan2MVBackend:
             "runtime_seconds": 0.0,
             "peak_vram_mb": 0,
             "seed": seed,
-            "variant": variant,
-            "checkpoint": self.CHECKPOINT,
+            "model_variant": model_variant,
+            "model_id": model_id,
+            "parameters": {
+                "num_inference_steps": num_inference_steps,
+                "guidance_scale": guidance_scale,
+                "octree_resolution": octree_resolution,
+                "num_chunks": num_chunks,
+                "output_type": output_type,
+            },
+            "warnings": [],
+            "error": None,
+            "model_hash": "unknown_hash",
+            "input_manifest_path": "",
         }
 
-        # Validate: right view must not be in views
-        if "right" in views:
-            log.warning(
-                "generate() received 'right' view — this is not supported by the checkpoint. "
-                "Removing it. Use right view for QA/scoring only."
-            )
-            views = {k: v for k, v in views.items() if k != "right"}
-
-        # Validate required views present
         caps = self.capabilities()
+        checkpoint_views = {k: v for k, v in views.items() if k in caps.supported_views}
+        unsupported_views = {k: v for k, v in views.items() if k not in caps.supported_views}
+
         for required in caps.supported_views:
             if required not in views:
                 result["status"] = f"error: missing required view '{required}'"
+                result["error"] = result["status"]
                 return result
 
+        if unsupported_views:
+            msg = f"Unsupported views excluded from model inference: {list(unsupported_views.keys())}"
+            log.info(msg)
+            result["warnings"].append(msg)
+
+        out_dir = Path(output_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        manifest_path = out_dir / f"manifest_{seed}.json"
+        
+        # Save manifest
+        manifest = {
+            "job_id": job_id,
+            "seed": seed,
+            "views_provided": views,
+            "views_used_by_model": checkpoint_views,
+            "parameters": result["parameters"]
+        }
+        manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        result["input_manifest_path"] = str(manifest_path)
+
         t_start = time.perf_counter()
-        out_path = Path(output_dir) / f"raw_{seed}_{variant}.glb"
-        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"raw_{seed}_{model_variant}.glb"
 
         try:
-            self._load_model(variant)
+            self._load_model(model_id, model_variant, attention_backend, enable_cpu_offload)
 
             import torch
             with torch.no_grad():
-                # Set seed for reproducibility
                 torch.manual_seed(seed)
                 if torch.cuda.is_available():
                     torch.cuda.manual_seed(seed)
 
-                # Load images
                 from PIL import Image
                 pil_views = {
                     orient: Image.open(path).convert("RGBA")
-                    for orient, path in views.items()
+                    for orient, path in checkpoint_views.items()
                     if Path(path).exists()
                 }
 
-                log.info(
-                    "Generating with seed=%d, steps=%d, variant=%s, views=%s",
-                    seed, steps, variant, list(pil_views.keys())
-                )
+                # We must enforce order if possible, though dicts keep insertion order.
+                # The model typically expects: front, left, back... but the PIL dict should be fine if matched by keys internally by the pipeline.
 
-                # Run pipeline
                 mesh = self._model(
                     image=pil_views,
-                    num_inference_steps=steps,
+                    num_inference_steps=num_inference_steps,
+                    guidance_scale=guidance_scale,
+                    octree_resolution=octree_resolution,
+                    mc_algo="marching_cubes",
                     generator=torch.Generator().manual_seed(seed),
                 )
-
-                # Export raw GLB — NEVER modify before saving
+                
+                # Check output type and validate
+                if not hasattr(mesh, 'vertices') or not hasattr(mesh, 'faces'):
+                    # Some pipelines return a wrapper or list
+                    if isinstance(mesh, list) and len(mesh) > 0:
+                        mesh = mesh[0]
+                
+                # Validate vertices and faces
+                if not hasattr(mesh, 'vertices') or len(mesh.vertices) == 0:
+                    raise ValueError("Generated mesh has no vertices.")
+                if not hasattr(mesh, 'faces') or len(mesh.faces) == 0:
+                    raise ValueError("Generated mesh has no faces.")
+                
                 mesh.export(str(out_path))
                 log.info("Raw mesh saved: %s", out_path)
 
-            # VRAM peak
             if torch.cuda.is_available():
                 result["peak_vram_mb"] = int(
                     torch.cuda.max_memory_allocated() / (1024 * 1024)
@@ -285,53 +301,18 @@ class Hunyuan2MVBackend:
             is_oom = any(k in err_str.lower() for k in ("out of memory", "cuda", "vram"))
             if is_oom:
                 result["status"] = f"error_vram: {err_str[:300]}"
-                log.error("OOM in Hunyuan3D-2mv (seed=%d, variant=%s): %s", seed, variant, err_str[:200])
+                result["error"] = result["status"]
+                log.error("OOM in Hunyuan3D-2mv (seed=%d, variant=%s): %s", seed, model_variant, err_str[:200])
             else:
                 result["status"] = f"error: {err_str[:300]}"
+                result["error"] = result["status"]
                 log.error("Hunyuan3D-2mv failed: %s", err_str[:200])
         except Exception as e:
             result["status"] = f"error: {type(e).__name__}: {str(e)[:300]}"
+            result["error"] = result["status"]
             log.error("Hunyuan3D-2mv unexpected error: %s", e)
         finally:
             result["runtime_seconds"] = round(time.perf_counter() - t_start, 2)
             self._unload_model()
 
         return result
-
-    def generate_batch(
-        self,
-        views: Dict[str, str],
-        *,
-        seeds: List[int] = (11, 29, 47, 83),
-        steps_list: List[int] = (30, 40),
-        variants: List[str] = ("normal", "turbo"),
-        output_dir: str,
-        job_id: str,
-        on_candidate: Optional[Any] = None,    # callback(result) after each
-    ) -> List[Dict[str, Any]]:
-        """
-        Generate multiple candidates (seeds × steps × variants), sequentially.
-        One at a time to respect RTX 4070 8GB VRAM limit.
-
-        on_candidate: optional callback called after each candidate is generated.
-        """
-        results = []
-        for variant in variants:
-            for steps in steps_list:
-                for seed in seeds:
-                    log.info("Batch: seed=%d, steps=%d, variant=%s", seed, steps, variant)
-                    r = self.generate(
-                        views=views,
-                        seed=seed,
-                        steps=steps,
-                        variant=variant,
-                        output_dir=str(Path(output_dir) / f"candidate_{seed}_{steps}_{variant}"),
-                        job_id=job_id,
-                    )
-                    results.append(r)
-                    if on_candidate:
-                        try:
-                            on_candidate(r)
-                        except Exception:
-                            pass
-        return results

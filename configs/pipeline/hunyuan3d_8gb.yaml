@@ -1,0 +1,4 @@
+candidate_count: 3
+enable_hunyuan_paint: false
+max_parallel_candidates: 1
+vram_headroom_mb: 512

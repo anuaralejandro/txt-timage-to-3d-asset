@@ -1,0 +1,107 @@
+{
+  "1": {
+    "inputs": {
+      "image": "front.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image (Front)"
+    }
+  },
+  "2": {
+    "inputs": {
+      "image": "left.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image (Left)"
+    }
+  },
+  "3": {
+    "inputs": {
+      "image": "back.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image (Back)"
+    }
+  },
+  "4": {
+    "inputs": {
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentHunyuan3Dv2",
+    "_meta": {
+      "title": "EmptyLatentHunyuan3Dv2"
+    }
+  },
+  "5": {
+    "inputs": {
+      "front": [
+        "1",
+        0
+      ],
+      "left": [
+        "2",
+        0
+      ],
+      "back": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "Hunyuan3Dv2ConditioningMultiView",
+    "_meta": {
+      "title": "Hunyuan3Dv2ConditioningMultiView"
+    }
+  },
+  "6": {
+    "inputs": {
+      "model": "tencent/Hunyuan3D-2mv",
+      "subfolder": "hunyuan3d-dit-v2-mv",
+      "num_inference_steps": 30,
+      "guidance_scale": 7.0,
+      "seed": 11,
+      "latent": [
+        "4",
+        0
+      ],
+      "conditioning": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "Hunyuan3Dv2Sampler",
+    "_meta": {
+      "title": "Hunyuan3Dv2 Sampler (Standard)"
+    }
+  },
+  "7": {
+    "inputs": {
+      "samples": [
+        "6",
+        0
+      ],
+      "octree_resolution": 380,
+      "num_chunks": 20000
+    },
+    "class_type": "VAEDecodeHunyuan3D",
+    "_meta": {
+      "title": "VAEDecodeHunyuan3D"
+    }
+  },
+  "8": {
+    "inputs": {
+      "geometry": [
+        "7",
+        0
+      ],
+      "format": "glb",
+      "filename": "output_mesh"
+    },
+    "class_type": "voxel_to_mesh",
+    "_meta": {
+      "title": "Voxel to Mesh Export"
+    }
+  }
+}

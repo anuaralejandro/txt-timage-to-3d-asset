@@ -58,9 +58,9 @@
   "6": {
     "inputs": {
       "model": "tencent/Hunyuan3D-2mv",
-      "subfolder": "hunyuan3d-dit-v2-mv",
-      "num_inference_steps": 30,
-      "guidance_scale": 7.0,
+      "subfolder": "hunyuan3d-dit-v2-mv-turbo",
+      "num_inference_steps": 10,
+      "guidance_scale": 1.0,
       "seed": 11,
       "latent": [
         "4",
@@ -73,7 +73,7 @@
     },
     "class_type": "Hunyuan3Dv2Sampler",
     "_meta": {
-      "title": "Hunyuan3Dv2 Sampler (Standard)"
+      "title": "Hunyuan3Dv2 Sampler (Turbo)"
     }
   },
   "7": {
