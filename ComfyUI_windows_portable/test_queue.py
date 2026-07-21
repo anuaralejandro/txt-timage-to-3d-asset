@@ -5,7 +5,7 @@ prompt = {
     "1": {
         "class_type": "AssetFactory_LocalHunyuan",
         "inputs": {
-            "multiview_folder": r"C:\Users\datam\Downloads\jace",
+            "multiview_folder": "./input/jace",
             "workflow_path": "",
             "generate_3d": True,
             "resolution": 1024,

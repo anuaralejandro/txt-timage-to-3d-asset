@@ -1,0 +1,348 @@
+{
+  "last_node_id": 12,
+  "last_link_id": 101,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "AssetFactory_AssetBrief",
+      "pos": [
+        50,
+        200
+      ],
+      "size": {
+        "0": 360,
+        "1": 380
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "ASSET_REQUEST_JSON",
+          "type": "STRING",
+          "links": [
+            1,
+            9
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "STATUS",
+          "type": "STRING",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "AssetFactory_AssetBrief"
+      },
+      "widgets_values": [
+        "Royal Training Sword",
+        "weapon",
+        "Espada corta ceremonial para una princesa guerrera. Hoja ancha, guarda dorada, empu\u00f1adura azul, gema rosa.",
+        "royal_princess_fantasy",
+        "hero",
+        "android_mid",
+        2500,
+        "512",
+        42
+      ],
+      "_meta": {
+        "title": "1 \u00b7 Asset Brief"
+      }
+    },
+    {
+      "id": 2,
+      "type": "AssetFactory_OllamaPromptArchitect",
+      "pos": [
+        460,
+        100
+      ],
+      "size": {
+        "0": 360,
+        "1": 220
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "ASSET_REQUEST_JSON",
+          "type": "STRING",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ASSET_SPEC_JSON",
+          "type": "STRING",
+          "links": [
+            3,
+            5,
+            7,
+            11
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "CONCEPT_IMAGE_PROMPT",
+          "type": "STRING",
+          "links": [
+            2
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "CONCEPT_NEGATIVE_PROMPT",
+          "type": "STRING",
+          "links": [
+            4
+          ],
+          "slot_index": 2
+        },
+        {
+          "name": "TEXTURE_PROMPT_JSON",
+          "type": "STRING",
+          "links": [
+            6
+          ],
+          "slot_index": 3
+        },
+        {
+          "name": "STATUS",
+          "type": "STRING",
+          "links": [],
+          "slot_index": 4
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "AssetFactory_OllamaPromptArchitect"
+      },
+      "widgets_values": [
+        "qwen2.5:7b-instruct",
+        0.5,
+        2048,
+        true,
+        false
+      ],
+      "_meta": {
+        "title": "2 \u00b7 Ollama Prompt Architect"
+      }
+    },
+    {
+      "id": 3,
+      "type": "AssetFactory_LocalConceptImage",
+      "pos": [
+        870,
+        50
+      ],
+      "size": {
+        "0": 360,
+        "1": 280
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "CONCEPT_IMAGE_PROMPT",
+          "type": "STRING",
+          "link": 2
+        },
+        {
+          "name": "CONCEPT_NEGATIVE_PROMPT",
+          "type": "STRING",
+          "link": 4
+        },
+        {
+          "name": "ASSET_SPEC_JSON",
+          "type": "STRING",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [],
+          "slot_index": 0
+        },
+        {
+          "name": "IMAGE_PATH",
+          "type": "STRING",
+          "links": [
+            10,
+            12
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "STATUS",
+          "type": "STRING",
+          "links": [],
+          "slot_index": 2
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "AssetFactory_LocalConceptImage"
+      },
+      "widgets_values": [
+        "",
+        768,
+        768,
+        20,
+        7.0,
+        42,
+        true
+      ],
+      "_meta": {
+        "title": "3 \u00b7 Concept Image (SD)"
+      }
+    },
+    {
+      "id": 5,
+      "type": "AssetFactory_HunyuanMacroPipeline",
+      "pos": [
+        1290,
+        50
+      ],
+      "size": {
+        "0": 380,
+        "1": 340
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "FRONT_IMAGE",
+          "type": "IMAGE",
+          "link": 100
+        }
+      ],
+      "outputs": [
+        {
+          "name": "FINAL_GLB_PATH",
+          "type": "STRING",
+          "links": [
+            101
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "PIPELINE_STATUS",
+          "type": "STRING",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "AssetFactory_HunyuanMacroPipeline"
+      },
+      "widgets_values": [
+        "Character_Auto",
+        15000,
+        "android_mid",
+        "toon_mobile",
+        42
+      ],
+      "_meta": {
+        "title": "5 \u00b7 Macro Pipeline (M2-M6)"
+      }
+    },
+    {
+      "id": 12,
+      "type": "AssetFactory_Preview3D",
+      "pos": [
+        1800,
+        300
+      ],
+      "size": {
+        "0": 320,
+        "1": 380
+      },
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model_path",
+          "type": "STRING",
+          "link": 101
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "AssetFactory_Preview3D"
+      },
+      "widgets_values": [],
+      "title": "Final 3D Asset Preview",
+      "_meta": {
+        "title": "6 \u00b7 Final 3D Asset Preview"
+      }
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "STRING"
+    ],
+    [
+      2,
+      2,
+      1,
+      3,
+      0,
+      "STRING"
+    ],
+    [
+      3,
+      2,
+      0,
+      3,
+      2,
+      "STRING"
+    ],
+    [
+      4,
+      2,
+      2,
+      3,
+      1,
+      "STRING"
+    ],
+    [
+      100,
+      3,
+      0,
+      5,
+      0,
+      "IMAGE"
+    ],
+    [
+      101,
+      5,
+      0,
+      12,
+      0,
+      "STRING"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.6,
+      "offset": [
+        -20,
+        -50
+      ]
+    }
+  },
+  "version": 0.4
+}

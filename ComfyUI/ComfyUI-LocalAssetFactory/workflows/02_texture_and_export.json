@@ -1,0 +1,45 @@
+{
+  "_comment": "Stage 2: Texturing, Baking and Exporting. Assumes base geometry is provided from Stage 1.",
+  "1": {
+    "class_type": "AssetFactory_LocalTextureGenerator",
+    "inputs": {
+      "CONCEPT_IMAGE_PATH": ["2", 0],
+      "BASE_MODEL_PATH": ["3", 0],
+      "resolution": 1024,
+      "style": "stylized game asset"
+    },
+    "_meta": { "title": "Generate Textures (SD + ControlNet)" }
+  },
+  "2": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "front.png" },
+    "_meta": { "title": "Concept Art Reference" }
+  },
+  "3": {
+    "class_type": "StringLiteral",
+    "inputs": { "string": "" },
+    "_meta": { "title": "Base Model Path (from Stage 1)" }
+  },
+  "4": {
+    "class_type": "AssetFactory_BlenderProcessor",
+    "inputs": {
+      "MODEL_PATH": ["3", 0],
+      "TEXTURE_PATH": ["1", 0],
+      "create_fbx": true,
+      "clean_geometry": true,
+      "decimate": true,
+      "max_triangles": 5000,
+      "uv_unwrap": true
+    },
+    "_meta": { "title": "Blender Animation Prep & Bake" }
+  },
+  "5": {
+    "class_type": "AssetFactory_SaveManifest",
+    "inputs": {
+      "PROCESSED_MODEL_PATH": ["4", 0],
+      "PREVIEW_RENDER_PATHS_JSON": ["4", 1],
+      "BLENDER_REPORT_JSON": ["4", 2]
+    },
+    "_meta": { "title": "Save Final Manifest" }
+  }
+}

@@ -3,7 +3,7 @@ import shutil
 from huggingface_hub import hf_hub_download
 
 def download():
-    models_dir = r"C:\Users\datam\Videos\ComftyUI-text-2-3d-asset-gen\ComfyUI_windows_portable\ComfyUI\models\clip_vision"
+    models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ComfyUI", "models", "clip_vision")
     os.makedirs(models_dir, exist_ok=True)
     
     print("Downloading clip_vision_l.safetensors (ViT-L-14) from OpenAI (this might take a minute, it's ~1.7GB)...")

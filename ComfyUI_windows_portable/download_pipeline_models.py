@@ -2,7 +2,7 @@ import os
 from huggingface_hub import hf_hub_download
 
 # Base ComfyUI models directory
-comfy_base = r"c:\Users\datam\Videos\ComftyUI-text-2-3d-asset-gen\ComfyUI_windows_portable\ComfyUI\models"
+comfy_base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ComfyUI", "models")
 checkpoints_dir = os.path.join(comfy_base, "checkpoints")
 vae_dir = os.path.join(comfy_base, "vae")
 clip_vision_dir = os.path.join(comfy_base, "clip_vision")
@@ -23,6 +23,12 @@ models_to_download = [
         "filename": "hunyuan3d-dit-v2-mv-turbo/model.fp16.safetensors",
         "local_dir": checkpoints_dir,
         "rename": "hunyuan3d-dit-v2-mv-turbo.safetensors"
+    },
+    {
+        "repo_id": "tencent/Hunyuan3D-2mv",
+        "filename": "hunyuan3d-dit-v2-mv/model.fp16.safetensors",
+        "local_dir": checkpoints_dir,
+        "rename": "hunyuan3d-dit-v2-mv.safetensors"
     },
     {
         "repo_id": "tencent/Hunyuan3D-2",

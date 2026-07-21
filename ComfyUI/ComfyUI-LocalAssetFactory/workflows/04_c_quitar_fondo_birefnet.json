@@ -1,0 +1,488 @@
+{
+  "last_node_id": 20,
+  "last_link_id": 20,
+  "nodes": [
+    {
+      "id": 10,
+      "type": "BiRefNet_ModelLoader_Zho",
+      "pos": [
+        100,
+        -200
+      ],
+      "outputs": [
+        {
+          "name": "birefnetmodel",
+          "type": "BRNMODEL",
+          "links": [
+            10,
+            11,
+            12,
+            13
+          ],
+          "slot_index": 0
+        }
+      ],
+      "widgets_values": [
+        "pth/BiRefNet-general-epoch_244.pth"
+      ],
+      "_meta": {
+        "title": "\ud83e\uddf9BiRefNet Model Loader"
+      }
+    },
+    {
+      "id": 1,
+      "type": "LoadImage",
+      "pos": [
+        100,
+        50
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "widgets_values": [
+        "front.png",
+        "image"
+      ],
+      "_meta": {
+        "title": "1. Load Front View"
+      }
+    },
+    {
+      "id": 2,
+      "type": "LoadImage",
+      "pos": [
+        100,
+        350
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "widgets_values": [
+        "left.png",
+        "image"
+      ],
+      "_meta": {
+        "title": "1. Load Left View"
+      }
+    },
+    {
+      "id": 3,
+      "type": "LoadImage",
+      "pos": [
+        100,
+        650
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "widgets_values": [
+        "right.png",
+        "image"
+      ],
+      "_meta": {
+        "title": "1. Load Right View"
+      }
+    },
+    {
+      "id": 4,
+      "type": "LoadImage",
+      "pos": [
+        100,
+        950
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            4
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "widgets_values": [
+        "back.png",
+        "image"
+      ],
+      "_meta": {
+        "title": "1. Load Back View"
+      }
+    },
+    {
+      "id": 5,
+      "type": "BiRefNet_Zho",
+      "pos": [
+        500,
+        50
+      ],
+      "inputs": [
+        {
+          "name": "birefnetmodel",
+          "type": "BRNMODEL",
+          "link": 10
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            15
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "_meta": {
+        "title": "2. BiRefNet (Front)"
+      }
+    },
+    {
+      "id": 6,
+      "type": "BiRefNet_Zho",
+      "pos": [
+        500,
+        350
+      ],
+      "inputs": [
+        {
+          "name": "birefnetmodel",
+          "type": "BRNMODEL",
+          "link": 11
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            16
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "_meta": {
+        "title": "2. BiRefNet (Left)"
+      }
+    },
+    {
+      "id": 7,
+      "type": "BiRefNet_Zho",
+      "pos": [
+        500,
+        650
+      ],
+      "inputs": [
+        {
+          "name": "birefnetmodel",
+          "type": "BRNMODEL",
+          "link": 12
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            17
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "_meta": {
+        "title": "2. BiRefNet (Right)"
+      }
+    },
+    {
+      "id": 8,
+      "type": "BiRefNet_Zho",
+      "pos": [
+        500,
+        950
+      ],
+      "inputs": [
+        {
+          "name": "birefnetmodel",
+          "type": "BRNMODEL",
+          "link": 13
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            18
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "_meta": {
+        "title": "2. BiRefNet (Back)"
+      }
+    },
+    {
+      "id": 11,
+      "type": "SaveImage",
+      "pos": [
+        900,
+        50
+      ],
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 15
+        }
+      ],
+      "widgets_values": [
+        "bg_removed_biref_front"
+      ],
+      "_meta": {
+        "title": "3. Save Front Result"
+      }
+    },
+    {
+      "id": 12,
+      "type": "SaveImage",
+      "pos": [
+        900,
+        350
+      ],
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 16
+        }
+      ],
+      "widgets_values": [
+        "bg_removed_biref_left"
+      ],
+      "_meta": {
+        "title": "3. Save Left Result"
+      }
+    },
+    {
+      "id": 13,
+      "type": "SaveImage",
+      "pos": [
+        900,
+        650
+      ],
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 17
+        }
+      ],
+      "widgets_values": [
+        "bg_removed_biref_right"
+      ],
+      "_meta": {
+        "title": "3. Save Right Result"
+      }
+    },
+    {
+      "id": 14,
+      "type": "SaveImage",
+      "pos": [
+        900,
+        950
+      ],
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 18
+        }
+      ],
+      "widgets_values": [
+        "bg_removed_biref_back"
+      ],
+      "_meta": {
+        "title": "3. Save Back Result"
+      }
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      5,
+      1,
+      "IMAGE"
+    ],
+    [
+      2,
+      2,
+      0,
+      6,
+      1,
+      "IMAGE"
+    ],
+    [
+      3,
+      3,
+      0,
+      7,
+      1,
+      "IMAGE"
+    ],
+    [
+      4,
+      4,
+      0,
+      8,
+      1,
+      "IMAGE"
+    ],
+    [
+      10,
+      10,
+      0,
+      5,
+      0,
+      "BRNMODEL"
+    ],
+    [
+      11,
+      10,
+      0,
+      6,
+      0,
+      "BRNMODEL"
+    ],
+    [
+      12,
+      10,
+      0,
+      7,
+      0,
+      "BRNMODEL"
+    ],
+    [
+      13,
+      10,
+      0,
+      8,
+      0,
+      "BRNMODEL"
+    ],
+    [
+      15,
+      5,
+      0,
+      11,
+      0,
+      "IMAGE"
+    ],
+    [
+      16,
+      6,
+      0,
+      12,
+      0,
+      "IMAGE"
+    ],
+    [
+      17,
+      7,
+      0,
+      13,
+      0,
+      "IMAGE"
+    ],
+    [
+      18,
+      8,
+      0,
+      14,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "version": 0.4
+}

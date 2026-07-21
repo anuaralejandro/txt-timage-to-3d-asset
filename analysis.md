@@ -1,1019 +1,1051 @@
-# Arquitectura revisada: pipeline local Hunyuan multiview para personajes 3D móviles
+# Análisis técnico integral — Pipeline Hunyuan3D multivista para personajes
 
-**Proyecto:** `anuaralejandro/txt-timage-to-3d-asset`  
-**Decisión arquitectónica:** Hunyuan-first, multiview-first, sin TRELLIS, TripoSR, TripoSG, SkinTokens ni UniRig.  
-**Componentes permitidos:** familia Hunyuan publicada, SAM 3.1, Blender y utilidades open source independientes.
-
----
-
-## 1. Decisión definitiva
-
-La arquitectura correcta para este proyecto no debe tener backends 3D genéricos intercambiables como prioridad. El producto está enfocado en:
-
-- personajes anime o estilizados;
-- entrada multivista;
-- T-pose o A-pose estricta;
-- segmentación por partes;
-- low-poly para móvil;
-- rigging y animación;
-- funcionamiento local;
-- un stack controlado y mantenible.
-
-Por tanto, el backbone geométrico será:
-
-```text
-Hunyuan3D-2mv
-```
-
-y no Hunyuan3D-2.1 estándar.
-
-La distinción es esencial:
-
-- `Hunyuan3D-2mv` está ajustado específicamente para generación de forma controlada por múltiples vistas;
-- `Hunyuan3D-2.1` estándar se conserva para `Hunyuan3D-Paint` y tareas de textura;
-- `Hunyuan3D-Omni` se usa como generador alternativo o corrector condicionado por pose, bounding box, voxel o point cloud;
-- `Hunyuan3D-Part` se usa después de seleccionar la mejor malla para segmentación y descomposición 3D;
-- `SAM 3.1` se usa antes de la reconstrucción para máscaras 2D semánticas y validación entre vistas.
-
-No se incluirán:
-
-```text
-TRELLIS
-TRELLIS.2
-TripoSR
-TripoSG
-SkinTokens
-UniRig
-```
+**Repositorio:** `anuaralejandro/txt-timage-to-3d-asset`  
+**Rama auditada:** `feat/hunyuan-multiview-character-pipeline`  
+**Objetivo declarado:** convertir vistas ortográficas de un personaje anime en T-pose en un asset 3D de alta calidad, optimizado para Android/iOS, con geometría, textura, retopología, rigging, LOD y exportación GLB.
 
 ---
 
-## 2. Diagnóstico del resultado actual
+## 1. Conclusión ejecutiva
 
-La malla mostrada no es un personaje low-poly defectuoso: es una reconstrucción volumétrica fallida.
+El resultado gris y deformado no se explica por una sola causa. El sistema presenta una combinación de problemas de **versionado**, **reproducibilidad**, **configuración del checkpoint**, **conditioning multivista**, **muestreo**, **extracción volumétrica**, **normalización de cámaras**, **control de calidad inexistente o incompleto** y **expectativas arquitectónicas incompatibles con una malla generativa raw**.
 
-Los síntomas son:
+La transparencia falsa fue una causa inicial válida, pero ya no debe considerarse el principal sospechoso si el nuevo preflight realmente genera alpha útil y las imágenes canónicas muestran el personaje recortado correctamente. El foco actual debe desplazarse a los siguientes puntos:
 
-- brazos perdidos o fusionados con el torso;
-- cabeza y cabello convertidos en una masa;
-- pérdida completa de la silueta original;
-- piernas desconectadas semánticamente del cuerpo;
-- grosor lateral casi inexistente;
-- ruido escalonado en toda la superficie;
-- prendas, cabello y cuerpo unidos;
-- ninguna articulación utilizable;
-- topología no deformable;
-- imposibilidad de asignar materiales y huesos por parte.
-
-### Causa inmediata de entrada
-
-La imagen frontal aportada usa un PNG RGBA, pero su alfa es completamente opaco. El tablero visible está horneado en RGB, no es transparencia real.
-
-El pipeline debe producir:
-
-```text
-FAIL: baked_checkerboard_background
-FAIL: no_true_alpha
-WARN: insufficient_multiview_coverage
-```
-
-antes de ejecutar Hunyuan.
-
-### Causa arquitectónica
-
-El flujo actual se parece a:
-
-```text
-imagen
--> Hunyuan
--> decimate
--> UV
--> GLB
-```
-
-El flujo requerido es:
-
-```text
-multiview validado
--> máscaras 2D
--> reconstrucciones candidatas
--> scoring multivista
--> segmentación 3D
--> retopología por tipo de parte
--> UV y bake
--> texturizado
--> rigging
--> animation QA
--> LOD
--> GLB
-```
+1. El workflow real de ComfyUI no está versionado de forma reproducible en el repositorio padre.
+2. El instalador descarga el checkpoint **Turbo**, pero no garantiza que el workflow use el conditioning y guidance exigidos por Turbo.
+3. La reconstrucción probablemente utiliza una resolución volumétrica y un threshold que destruyen brazos, manos, cabello y espacios negativos.
+4. Existe riesgo de usar un image encoder incompatible, especialmente si se conecta `clip_vision_g` donde el checkpoint MV espera su conditioning DINO/multivista.
+5. El sistema descarta la vista derecha por una restricción no demostrada.
+6. Las cuatro imágenes se recortan y escalan por separado, sin registro anatómico multivista conjunto.
+7. Cualquier GLB generado puede marcarse como aprobado aunque sea una masa inutilizable.
+8. La mayor parte de la arquitectura “AAA mobile-ready” todavía es contrato, scaffolding o backlog, no una implementación end-to-end validada.
+9. La malla generativa de Hunyuan3D-2mv debe tratarse como **high mesh / candidato geométrico**, no como el asset final de producción.
 
 ---
 
-## 3. Stack aprobado
+## 2. Alcance y limitaciones de esta auditoría
 
-## 3.1 Generación y reconstrucción
+Se revisaron los archivos visibles en la rama, entre ellos:
 
-| Componente | Función en el pipeline | Estado |
-|---|---|---|
-| `tencent/Hunyuan3D-2mv` | Backbone principal de geometría multivista | Obligatorio |
-| `Tencent-Hunyuan/Hunyuan3D-Omni` | Candidato con control de pose, bbox, voxel o point cloud | Obligatorio para personajes |
-| `Tencent-Hunyuan/Hunyuan3D-2.1` | Runtime de shape/paint y base de integración | Obligatorio |
-| `Hunyuan3D-Paint` | Textura PBR o fuente high-to-low | Obligatorio después de topología |
-| `Tencent-Hunyuan/Hunyuan3D-Part` | Segmentación 3D P3-SAM y descomposición X-Part | Obligatorio |
-| `facebookresearch/sam3` con checkpoints 3.1 | Segmentación 2D semántica | Obligatorio |
-| `HunyuanImage-3.0-Instruct` o Distil | Texto/imagen a concepto; fase posterior por coste | Opcional |
-| Blender | Retopología, UV, bake, rig, QA y export | Obligatorio |
-| AutoRemesher / QuadriFlow | Candidato de retopología orgánica | Obligatorio con fallback |
-| OpenVDB / Voxel Remesh | Reparación y hard-surface | Obligatorio |
-| RigAnything | Auto-rig no comercial para candidato inicial | Opcional |
-| Rigify + automatic weights | Rig humanoide determinista | Fallback obligatorio |
+- `services/hunyuan3d_2mv/backend.py`
+- `src/local_asset_factory/geometry/hunyuan2mv_client.py`
+- `src/local_asset_factory/multiview/canonical_views.py`
+- `src/local_asset_factory/domain/models.py`
+- `src/local_asset_factory/domain/enums.py`
+- `configs/pipeline/default.yaml`
+- `ComfyUI_windows_portable/download_pipeline_models.py`
+- `ComfyUI_windows_portable/run_nvidia_gpu.bat`
+- `analysis.md`
+- `task.md`
+- `checklist.md`
+- scripts Blender y servicios auxiliares visibles en la rama
 
-## 3.2 Papel exacto de cada modelo
+### Limitación crítica
 
-### Hunyuan3D-2mv
+La ruta:
 
-Es el generador principal porque acepta un conjunto de vistas. El ejemplo oficial documenta:
+```text
+ComfyUI_windows_portable/ComfyUI
+```
+
+está registrada como un repositorio anidado o gitlink. El repositorio padre no expone de forma normal el contenido de:
+
+```text
+ComfyUI_windows_portable/ComfyUI/custom_nodes/ComfyUI-LocalAssetFactory/
+ComfyUI_windows_portable/ComfyUI/custom_nodes/ComfyUI-LocalAssetFactory/workflows/
+```
+
+Por ello, `04_hunyuan_multiview_unified.json` no puede auditarse de forma reproducible desde el repositorio padre. Hasta corregir esto, cualquier diagnóstico del grafo ComfyUI será necesariamente parcial.
+
+---
+
+# 3. Problemas confirmados
+
+## P0.1 — El workflow y los custom nodes no están versionados de forma reproducible
+
+### Evidencia
+
+La rama agrega `ComfyUI_windows_portable/ComfyUI` como una sola entrada, no como archivos individuales. Esto es consistente con un directorio que contiene su propio `.git`.
+
+### Impacto
+
+- No se puede revisar el workflow exacto.
+- No se puede reproducir la inferencia desde un clon limpio.
+- No se conocen conexiones, nodos, widgets, valores o versiones reales.
+- Los cambios locales pueden no estar en GitHub aunque el desarrollador crea que sí.
+- Es imposible asociar un GLB con el workflow que lo produjo.
+
+### Verificación local
+
+```powershell
+git ls-files --stage ComfyUI_windows_portable/ComfyUI
+```
+
+Si el primer campo es `160000`, es un gitlink.
+
+### Corrección
+
+Versionar fuera del repositorio interno:
+
+```text
+workflows/04_hunyuan_multiview_unified.json
+comfyui/ComfyUI-LocalAssetFactory/
+```
+
+Añadir un script de instalación o sincronización:
+
+```text
+scripts/install_comfy_nodes.ps1
+scripts/install_comfy_nodes.py
+```
+
+El script debe copiar o enlazar los nodos y workflows hacia la instalación local de ComfyUI.
+
+---
+
+## P0.2 — El instalador descarga Turbo sin asegurar un workflow Turbo correcto
+
+### Evidencia
+
+`download_pipeline_models.py` descarga:
+
+```text
+tencent/Hunyuan3D-2mv/
+hunyuan3d-dit-v2-mv-turbo/model.fp16.safetensors
+```
+
+y lo renombra como checkpoint de ComfyUI. No descarga el modelo normal MV en la misma ruta de instalación.
+
+### Riesgo técnico
+
+Los checkpoints distilled/Turbo suelen requerir una configuración distinta a la del modelo normal. En particular, no debe asumirse que funcionan correctamente con:
+
+- CFG tradicional alto.
+- Scheduler arbitrario.
+- Guidance no compatible.
+- Número de pasos heredado del modelo normal.
+- Conditioning negativo convencional no previsto por el workflow Turbo.
+
+Una configuración incorrecta puede producir:
+
+- masa central amorfa;
+- pérdida de extremidades;
+- siluetas fusionadas;
+- geometría casi plana o perforada;
+- ruido volumétrico;
+- resultados extremadamente sensibles al seed.
+
+### Corrección
+
+Mantener dos baselines separados:
+
+```text
+hunyuan3d-dit-v2-mv.safetensors
+hunyuan3d-dit-v2-mv-turbo.safetensors
+```
+
+Los workflows deben estar separados o parametrizados explícitamente:
+
+```text
+04a_hunyuan_multiview_normal.json
+04b_hunyuan_multiview_turbo.json
+```
+
+Nunca permitir que un checkpoint Turbo use silenciosamente los parámetros del normal.
+
+---
+
+## P0.3 — No existe una baseline oficial congelada
+
+### Problema
+
+No hay un paquete de evidencia que demuestre que la instalación local de Hunyuan3D-2mv funciona correctamente con:
+
+- workflow oficial;
+- imágenes oficiales;
+- checkpoint correcto;
+- VAE correcto;
+- encoder correcto;
+- sampler y scheduler correctos;
+- extracción de malla correcta.
+
+### Impacto
+
+Actualmente no puede distinguirse entre:
+
+1. instalación dañada;
+2. pesos equivocados;
+3. workflow equivocado;
+4. imágenes difíciles;
+5. threshold inadecuado;
+6. bug de postprocesamiento.
+
+### Corrección
+
+Crear:
+
+```text
+benchmarks/baseline_official/
+├── input/
+├── workflow.json
+├── environment.json
+├── model_hashes.json
+├── output_raw.glb
+├── renders/
+└── report.md
+```
+
+La baseline debe ejecutarse antes de probar el personaje Jace.
+
+---
+
+## P0.4 — Resolución volumétrica y threshold potencialmente destructivos
+
+### Síntoma compatible
+
+La malla observada tiene:
+
+- planos grandes y triangulados;
+- brazos o huecos colapsados;
+- masa central gruesa;
+- ruido escalonado;
+- cavidades;
+- pérdida de partes delgadas.
+
+Esto es típico de una extracción a baja resolución o threshold demasiado alto.
+
+### Parámetros que deben registrarse
+
+- latent resolution;
+- VAE;
+- `octree_resolution`;
+- `num_chunks`;
+- algoritmo de extracción;
+- `mesh_threshold`;
+- simplificación posterior;
+- weld/merge distance;
+- remove small components;
+- decimation ratio.
+
+### Baseline recomendada
+
+```yaml
+octree_resolution: 380
+num_chunks: 20000
+mesh_algorithm: surface_net
+threshold_sweep:
+  - 0.45
+  - 0.50
+  - 0.55
+  - 0.60
+```
+
+El threshold debe evaluarse usando el mismo latent para aislar la etapa de extracción.
+
+---
+
+## P0.5 — Posible image encoder incompatible
+
+### Evidencia de riesgo
+
+El instalador descarga:
+
+```text
+clip_vision_g.safetensors
+```
+
+El checkpoint Hunyuan3D-2mv utiliza una arquitectura de conditioning multivista específica. Si el workflow sustituye dicho encoder por CLIP Vision G genérico, puede aceptar tensores sin producir un conditioning semánticamente correcto.
+
+### Consecuencia
+
+- el modelo no interpreta correctamente las vistas;
+- la forma se aproxima a un volumen promedio;
+- las vistas pueden mezclarse o perder correspondencia;
+- la calidad no mejora al agregar imágenes.
+
+### Acción obligatoria
+
+Auditar el JSON y documentar:
+
+```text
+loader exacto
+image encoder exacto
+node de conditioning exacto
+orden de vistas
+normalización esperada
+resolución de entrada
+dtype
+device
+```
+
+No aceptar una cadena “funciona porque no arroja error”.
+
+---
+
+## P0.6 — El backend Python no replica una inferencia de referencia completa
+
+En `services/hunyuan3d_2mv/backend.py`, la llamada central solo pasa:
 
 ```python
-image={
-    "front": "...",
-    "left": "...",
-    "back": "..."
+image=pil_views
+num_inference_steps=steps
+generator=...
+```
+
+No fija explícitamente:
+
+- `octree_resolution`;
+- `num_chunks`;
+- `output_type`;
+- device del generator;
+- revision del modelo;
+- dtype;
+- offload policy;
+- parámetros de extracción;
+- hash de las imágenes canónicas;
+- hash de los pesos.
+
+Además, el código exporta directamente el objeto devuelto sin validar de forma explícita si el pipeline retorna una lista o colección de meshes.
+
+### Corrección
+
+Crear un contrato de inferencia completo y serializable:
+
+```yaml
+checkpoint:
+revision:
+variant:
+dtype:
+device:
+views:
+seed:
+steps:
+guidance:
+sampler:
+scheduler:
+octree_resolution:
+num_chunks:
+mesh_algorithm:
+mesh_threshold:
+output_type:
+```
+
+El manifest debe contener todos estos valores.
+
+---
+
+## P0.7 — Se marca el candidato como aprobado solo porque existe un GLB
+
+En `hunyuan2mv_client.py`, un resultado exitoso del backend crea un `GeometryCandidate` con:
+
+```python
+passed_gates=True
+```
+
+aunque todavía no se hayan calculado las métricas.
+
+### Impacto
+
+Una roca, masa, malla vacía o personaje sin brazos puede avanzar a etapas posteriores.
+
+### Corrección
+
+El estado correcto después de generación debe ser:
+
+```text
+generated_unscored
+```
+
+y no aprobado.
+
+Flujo requerido:
+
+```text
+generated
+→ rendered
+→ metrics_computed
+→ hard_gates_evaluated
+→ ranked
+→ selected/rejected
+```
+
+`passed_gates` solo puede establecerse después de los hard gates.
+
+---
+
+# 4. Problemas de vistas y conditioning
+
+## P1.1 — Normalización individual en lugar de registro multivista conjunto
+
+`canonical_views.py`:
+
+1. obtiene bbox por alpha;
+2. recorta cada imagen;
+3. crea un canvas cuadrado;
+4. centra;
+5. redimensiona.
+
+El procedimiento se ejecuta independientemente por vista.
+
+### Qué no corrige
+
+- ojos a diferente altura;
+- cabeza a diferente escala;
+- hombros desalineados;
+- pelvis desplazada;
+- pies en distinta línea basal;
+- torso más largo en una lateral;
+- brazos a distinta altura;
+- coleta con diferente origen;
+- cámara con perspectiva desigual.
+
+### Solución
+
+Crear un `MultiviewRegistrationResult` basado en landmarks:
+
+```text
+head_top
+chin
+neck_center
+shoulder_left/right
+elbow_left/right
+wrist_left/right
+pelvis_center
+knee_left/right
+ankle_left/right
+foot_baseline
+```
+
+La transformación debe calcularse como conjunto, no maximizar cada vista por separado.
+
+---
+
+## P1.2 — Las vistas se etiquetan como ortográficas sin demostrarlo
+
+El código guarda:
+
+```python
+camera_type=ORTHOGRAPHIC
+camera_yaw_deg=...
+```
+
+pero esto es metadata declarativa. No demuestra que la imagen haya sido generada con cámara ortográfica.
+
+### Riesgo
+
+Si las vistas laterales usan perspectiva o diferente distancia focal:
+
+- el pecho y pelvis cambian de volumen;
+- la cabeza cambia de proporción;
+- manos y botas se escalan de forma desigual;
+- la reconstrucción multivista se vuelve contradictoria.
+
+### Solución
+
+El preflight debe calcular indicadores de consistencia y permitir:
+
+```text
+PASS orthographic_like
+WARN weak_perspective
+FAIL incompatible_perspective
+```
+
+---
+
+## P1.3 — La política de descartar `right` es demasiado rígida
+
+El proyecto define que `right` es solo para QA y el backend la elimina.
+
+### Problema
+
+El soporte exacto debe determinarse por la implementación/checkpoint realmente instalado, no por una interpretación restrictiva del ejemplo mínimo.
+
+### Solución
+
+Implementar capabilities dinámicas:
+
+```json
+{
+  "supported_views": ["front", "left", "back", "right"],
+  "required_views": ["front"],
+  "recommended_view_sets": [
+    ["front", "left", "back"],
+    ["front", "left", "back", "right"]
+  ]
 }
 ```
 
-El contrato interno del proyecto puede conservar cuatro vistas:
+Ejecutar A/B con tres y cuatro vistas.
 
-```text
-front
-left
-back
-right
+---
+
+## P1.4 — No hay verificación de orden semántico de vistas
+
+Una vista mal conectada puede ser válida como imagen, pero incorrecta como orientación:
+
+- left/right intercambiadas;
+- back conectada como front;
+- imagen reflejada;
+- convención de yaw opuesta;
+- manos o accesorios asimétricos confundidos.
+
+### Solución
+
+Añadir validaciones:
+
+- face visible en front;
+- face ausente o mínima en back;
+- nariz orientada correctamente en left/right;
+- embeddings de front/back distintos;
+- detección de espejo;
+- hash y preview etiquetados.
+
+---
+
+## P1.5 — El fondo transparente no basta: el RGB de píxeles transparentes puede contaminar bordes
+
+Aunque alpha sea real, los píxeles con alpha 0 pueden conservar checkerboard, negro o blanco en RGB.
+
+### Riesgo
+
+Al redimensionar con Lanczos, el RGB oculto puede mezclarse en el borde y crear halos.
+
+### Solución
+
+Antes de resize:
+
+```python
+rgb[alpha == 0] = neutral_background
 ```
 
-pero el adaptador debe consultar las capacidades del checkpoint y alimentar únicamente las claves realmente soportadas. La vista derecha sigue siendo útil para:
+o premultiplicar alpha correctamente.
 
-- validar consistencia;
-- puntuar la reconstrucción;
-- detectar asimetrías;
-- seleccionar el mejor candidato;
-- proyectar máscaras.
-
-No se debe asumir que agregar una clave no documentada será aceptado.
-
-### Hunyuan3D-Omni
-
-No sustituye el backbone multiview. Su función es crear candidatos condicionados:
-
-- `pose`: preservar T-pose;
-- `bbox`: bloquear proporciones globales;
-- `voxel`: preservar volumen;
-- `point`: preservar forma aproximada.
-
-Estrategia recomendada:
+Guardar dos artefactos:
 
 ```text
-Candidato A: Hunyuan3D-2mv
-Candidato B: Hunyuan3D-Omni + pose
-Candidato C: Hunyuan3D-Omni + voxel derivado de A
+canonical_rgba.png
+canonical_composited_neutral.png
 ```
 
-No se deben fusionar automáticamente las tres mallas. Se renderizan, puntúan y se elige una.
+y usar el formato exacto esperado por el preprocesador.
 
-### Hunyuan3D-Part
+---
 
-Se ejecuta sobre la malla seleccionada.
+# 5. Problemas del modelo y entorno
 
-- P3-SAM obtiene características semánticas, segmentos y bounding boxes 3D.
-- X-Part reconstruye o completa partes coherentes.
+## P1.6 — Dos rutas de inferencia sin una fuente única de configuración
 
-La salida esperada no debe ser un único objeto:
+Existen:
+
+1. workflow ComfyUI nativo;
+2. backend Python `Hunyuan2MVBackend`.
+
+No está demostrado que compartan:
+
+- checkpoint;
+- VAE;
+- encoder;
+- steps;
+- guidance;
+- scheduler;
+- octree;
+- threshold;
+- preprocessing.
+
+### Impacto
+
+Un resultado de ComfyUI no puede compararse directamente con el backend Python.
+
+### Solución
+
+Crear una especificación única:
+
+```text
+configs/models/hunyuan3d_2mv_normal.yaml
+configs/models/hunyuan3d_2mv_turbo.yaml
+```
+
+ComfyUI y Python deben leer o exportar los mismos valores.
+
+---
+
+## P1.7 — Falta pinning de revisiones y hashes
+
+El código registra el nombre del checkpoint, pero no siempre su revisión real.
+
+### Riesgo
+
+Una actualización silenciosa puede cambiar resultados.
+
+### Solución
+
+Registrar:
+
+- repo ID;
+- revision/commit;
+- archivo;
+- SHA-256;
+- tamaño;
+- dtype;
+- versión de `hy3dgen`;
+- versión de ComfyUI;
+- versión de PyTorch/CUDA;
+- driver;
+- GPU.
+
+---
+
+## P1.8 — FlashAttention se habilita incondicionalmente
+
+El backend llama:
+
+```python
+self._model.enable_flashattn()
+```
+
+sin comprobar:
+
+- compatibilidad;
+- versión;
+- dtype;
+- fallback;
+- equivalencia numérica.
+
+### Solución
+
+Usar una capability:
+
+```yaml
+attention_backend: auto
+allow_flash_attention: true
+fallback: sdpa
+```
+
+Registrar cuál se usó realmente.
+
+---
+
+## P1.9 — El generador de PyTorch no especifica dispositivo
+
+El código usa:
+
+```python
+torch.Generator().manual_seed(seed)
+```
+
+### Riesgo
+
+Dependiendo de la implementación, el generator CPU puede no corresponder al device esperado o producir diferencias.
+
+### Solución
+
+```python
+torch.Generator(device=device).manual_seed(seed)
+```
+
+---
+
+# 6. Problemas de scoring y selección
+
+## P1.10 — Las métricas existen como modelos, pero no como circuito de rechazo demostrado
+
+El repositorio define:
+
+- silhouette IoU;
+- semantic IoU;
+- keypoint error;
+- pose error;
+- head/body ratio;
+- arm separation;
+- leg separation;
+- mesh health;
+- surface noise.
+
+Sin embargo, no está demostrado que el workflow actual:
+
+1. renderice cada candidato;
+2. calcule métricas;
+3. aplique hard gates;
+4. rechace todos si ninguno pasa;
+5. seleccione el mejor;
+6. preserve el raw de cada candidato.
+
+### Corrección
+
+Hard gates mínimos:
+
+```yaml
+head_present: true
+both_arms_present: true
+both_legs_present: true
+min_silhouette_iou: 0.55
+min_arm_separation: 0.08
+min_leg_separation: 0.05
+max_non_manifold_edges: 500
+max_degenerate_faces: 100
+max_surface_noise: 0.35
+```
+
+No seleccionar “el menos malo” si todos fallan.
+
+---
+
+## P1.11 — No se diferencia fallo de forma y fallo de extracción
+
+Un mesh malo puede venir de:
+
+- latent malo;
+- VAE decode malo;
+- threshold malo;
+- componente pequeño eliminado;
+- postprocesamiento Blender.
+
+### Solución
+
+Guardar artefactos intermedios:
+
+```text
+conditioning_preview/
+latent_metadata.json
+decoded_volume_metadata.json
+mesh_threshold_045.glb
+mesh_threshold_050.glb
+mesh_threshold_055.glb
+mesh_threshold_060.glb
+raw_unmodified.glb
+postprocessed.glb
+```
+
+---
+
+# 7. Problemas de postprocesamiento y expectativas
+
+## P1.12 — Decimation no equivale a retopología
+
+Reducir triángulos de una malla generativa:
+
+- no crea loops de hombro;
+- no crea loops de codo;
+- no mejora axila o ingle;
+- no separa ropa, cuerpo y cabello;
+- no crea topología facial;
+- no preserva deformación.
+
+### Solución
+
+Para personajes humanoides:
+
+```text
+high mesh seleccionado
+→ segmentación por partes
+→ template wrap corporal
+→ retopología por parte
+→ recomposición
+→ UV
+→ bake
+→ rigging
+```
+
+---
+
+## P1.13 — Hunyuan3D-2mv no genera por sí solo un asset AAA listo para móvil
+
+La salida raw debe considerarse:
+
+```text
+geometric candidate / high mesh
+```
+
+No:
+
+```text
+final production asset
+```
+
+Un asset listo para Android/iOS requiere:
+
+- topología deformable;
+- rig;
+- skin weights;
+- LOD;
+- UV estable;
+- texturas;
+- materiales;
+- límites de influencias;
+- compresión;
+- colliders;
+- validación GLTF;
+- pruebas en motor.
+
+---
+
+## P1.14 — El sistema no garantiza modularidad de prendas
+
+Una reconstrucción completa desde vistas vestidas tiende a fusionar:
+
+- piel;
+- top;
+- shorts;
+- cinturón;
+- paneles;
+- cabello;
+- botas.
+
+### Solución estratégica
+
+Mantener un cuerpo base canónico con:
+
+- topología fija;
+- UV fija;
+- rig fijo;
+- proporciones parametrizables.
+
+Generar o reconstruir por separado:
 
 ```text
 body
-hair_front
-hair_back
-ponytail
-top
-shorts
-belt
-skirt_panel
-glove_L
-glove_R
-boot_L
-boot_R
-accessory_red
-```
-
-### SAM 3.1
-
-Se usa para máscaras semánticas en cada vista:
-
-```text
-skin/body
 hair
-face
-eyes
 top
 shorts
-belt
-skirt panel
-left glove
-right glove
-left boot
-right boot
-red accessories
-```
-
-SAM 3.1 no crea geometría y no sustituye Hunyuan3D-Part. Sus salidas se usan para:
-
-- limpiar fondos;
-- separar partes visuales;
-- comprobar que una parte existe en varias vistas;
-- crear bounding boxes;
-- generar mapas de ocupación;
-- proyectar etiquetas sobre el mesh;
-- puntuar siluetas.
-
-### Hunyuan3D-Paint
-
-Debe ejecutarse después de:
-
-```text
-segmentación 3D
--> retopología
--> UV final
--> atlas
-```
-
-Pintar una malla raw y remallarla después desperdicia correspondencia, seams y detalle.
-
----
-
-## 4. Arquitectura objetivo
-
-```mermaid
-flowchart LR
-    A[Texto o vistas del usuario] --> B[Input Preflight]
-    B --> C{Tipo de entrada}
-
-    C -->|Multiview| D[Canonical View Set]
-    C -->|Texto/una imagen| E[HunyuanImage Concept Builder]
-    E --> D
-
-    D --> F[SAM 3.1 Semantic Masks]
-    F --> G[Multiview Consistency Gate]
-
-    G --> H1[Hunyuan3D-2mv Candidate Set]
-    G --> H2[Hunyuan3D-Omni Pose Candidate]
-    H1 --> H3[Optional Omni Voxel Candidate]
-
-    H1 --> I[Canonical Render and Scoring]
-    H2 --> I
-    H3 --> I
-
-    I --> J[Selected Raw Mesh]
-    J --> K[Hunyuan3D-Part P3-SAM]
-    K --> L[X-Part Decomposition]
-    L --> M[Per-Part Classifier]
-
-    M -->|Organic deforming| N[Template Wrap + AutoRemesher]
-    M -->|Hard surface| O[OpenVDB + Planar Cleanup]
-    M -->|Hair/accessory| P[Dedicated Part Strategy]
-
-    N --> Q[Recompose Low-Poly Character]
-    O --> Q
-    P --> Q
-
-    Q --> R[UV Atlas and High-to-Low Bake]
-    R --> S[Hunyuan3D-Paint / Toon Material]
-    S --> T[RigAnything Candidate]
-    T --> U[Rigify Validation and Fallback]
-    U --> V[Animation QA]
-    V --> W[LOD and Mobile Optimization]
-    W --> X[GLB + Manifest + QC]
+boots
+gloves
+accessories
 ```
 
 ---
 
-## 5. Arquitectura de software
+# 8. Problemas de implementación incompleta
 
-ComfyUI será una capa visual, no el núcleo.
+## P2.1 — Gran parte del pipeline es scaffolding
 
-```text
-txt-timage-to-3d-asset/
-├── pyproject.toml
-├── configs/
-│   ├── pipeline/
-│   ├── models/
-│   ├── quality/
-│   ├── mobile/
-│   └── licenses/
-├── src/local_asset_factory/
-│   ├── domain/
-│   ├── orchestration/
-│   ├── preflight/
-│   ├── multiview/
-│   ├── segmentation2d/
-│   ├── geometry/
-│   │   ├── hunyuan2mv.py
-│   │   └── hunyuan_omni.py
-│   ├── scoring/
-│   ├── parts3d/
-│   │   └── hunyuan_part.py
-│   ├── topology/
-│   ├── texturing/
-│   │   └── hunyuan_paint.py
-│   ├── rigging/
-│   ├── animation_qa/
-│   ├── optimization/
-│   ├── export/
-│   └── observability/
-├── services/
-│   ├── hunyuan3d_2mv/
-│   ├── hunyuan3d_omni/
-│   ├── hunyuan3d_part/
-│   ├── hunyuan3d_paint/
-│   ├── sam3_1/
-│   ├── hunyuan_image/
-│   └── riganything/
-├── blender/
-│   ├── scripts/
-│   ├── templates/
-│   └── test_animations/
-├── comfyui/
-│   └── ComfyUI-LocalAssetFactory/
-├── workflows/
-├── tests/
-├── benchmarks/
-└── docs/
-```
+El repositorio contiene contratos, dataclasses, configuraciones, READMEs y scripts iniciales, pero no demuestra una ejecución completa de:
 
-## 5.1 Servicios aislados
+- SAM semántico real;
+- consistency gate;
+- múltiples candidatos;
+- scoring real;
+- Hunyuan3D-Part real;
+- retopología real;
+- UV/bake real;
+- Hunyuan Paint real;
+- rigging real;
+- animation QA real;
+- export mobile validado.
 
-Se requieren entornos separados porque los runtimes no coinciden:
+### Consecuencia
 
-```text
-env-hunyuan2mv
-env-hunyuan-omni
-env-hunyuan-part
-env-hunyuan-paint
-env-sam3-1
-env-hunyuan-image
-env-riganything
-blender-runtime
-```
-
-SAM 3.1 requiere un stack reciente. No debe instalarse dentro del Python portable de ComfyUI.
-
-Cada servicio expone:
-
-```text
-GET /health
-GET /capabilities
-POST /infer
-POST /cancel
-GET /jobs/{id}
-```
-
-o una CLI equivalente.
+La arquitectura documentada es más madura que la implementación ejecutable.
 
 ---
 
-## 6. Contratos de datos
+## P2.2 — `allow_partial_success: true` puede ocultar fallos
 
-## 6.1 AssetRequest
+En configuración se permite éxito parcial.
+
+### Riesgo
+
+Un job puede producir un GLB aunque fallen:
+
+- scoring;
+- part segmentation;
+- retopology;
+- rigging;
+- QA.
+
+### Solución
+
+Definir perfiles:
 
 ```yaml
-asset_name: jace
-asset_type: humanoid_character
-style: anime_low_poly
-target_platform: android_mid
-pose: strict_t_pose
-triangle_budget_lod0: 28000
-texture_resolution: 2048
-views:
-  front: input/front.png
-  left: input/left.png
-  back: input/back.png
-  right: input/right.png
-```
+research_debug:
+  allow_partial_success: true
 
-## 6.2 CanonicalView
-
-Cada vista contiene:
-
-```text
-orientation
-image_path
-mask_path
-width
-height
-subject_bbox
-camera_type
-camera_yaw
-camera_pitch
-keypoints_2d
-semantic_masks
-identity_embedding
-sha256
-```
-
-## 6.3 GeometryCandidate
-
-```text
-backend
-checkpoint
-revision
-seed
-input_views
-control_type
-raw_mesh
-render_paths
-metrics
-warnings
-runtime_seconds
-peak_vram_mb
-```
-
-## 6.4 Part3D
-
-```text
-semantic_name
-source_faces
-mesh_path
-confidence
-part_class
-symmetry_partner
-rig_policy
-material_policy
-topology_policy
+production_mobile:
+  allow_partial_success: false
 ```
 
 ---
 
-## 7. Pipeline detallado
+## P2.3 — Rutas absolutas y entorno local
 
-## Etapa 0 — Preflight
-
-Debe validar:
-
-- alfa real;
-- tablero horneado;
-- fondo;
-- orientación;
-- cuerpo completo;
-- pose;
-- brazos separados;
-- piernas separadas;
-- resolución;
-- similitud entre vistas;
-- correspondencia de vestuario;
-- escala relativa;
-- cámaras.
-
-Gates iniciales:
-
-```yaml
-alpha:
-  require_true_alpha_or_uniform_background: true
-checkerboard:
-  reject_baked_pattern: true
-pose:
-  max_shoulder_angle_error_deg: 5
-  max_elbow_flexion_deg: 7
-multiview:
-  require_front: true
-  require_left: true
-  require_back: true
-  right_view_policy: validation
-```
-
-## Etapa 1 — SAM 3.1
-
-Ejecutar segmentación por texto y refinar con boxes/puntos.
-
-No aceptar automáticamente una máscara. Validar:
-
-- área mínima;
-- conectividad;
-- relación espacial;
-- aparición en vistas esperadas;
-- simetría;
-- solapamiento permitido.
-
-Ejemplo:
-
-```yaml
-parts:
-  - body
-  - hair
-  - top
-  - shorts
-  - gloves
-  - boots
-  - belt
-  - skirt_panel
-  - red_accessories
-```
-
-## Etapa 2 — Consistencia multivista
-
-Comparar:
-
-- proporción cabeza/cuerpo;
-- ancho de hombros;
-- ancho de pelvis;
-- longitud de extremidades;
-- posición de botas;
-- volumen de cabello;
-- presencia de accesorios;
-- paleta de color;
-- keypoints.
-
-Si falla:
+Hay scripts con rutas como:
 
 ```text
-do_not_generate_3d
+C:\Users\datam\Videos\...
 ```
 
-Primero se corrigen o regeneran las vistas.
+### Impacto
 
-## Etapa 3 — Hunyuan3D-2mv
+- no reproducible;
+- no portable;
+- falla en otra máquina;
+- complica CI;
+- impide instalación limpia.
 
-Generar múltiples candidatos del mismo checkpoint:
+### Solución
 
-```yaml
-samples:
-  seeds: [11, 29, 47, 83]
-  inference_steps: [30, 40]
-  variants:
-    - hunyuan3d-dit-v2-mv
-    - hunyuan3d-dit-v2-mv-turbo
-```
+Usar:
 
-No usar el checkpoint estándar de 2.1 como si fuera multiview.
+- `.env`;
+- paths relativos;
+- configuración;
+- detección automática;
+- CLI `doctor`.
 
-## Etapa 4 — Hunyuan3D-Omni
+---
 
-Generar al menos:
+# 9. Arquitectura recomendada
 
 ```text
-pose-controlled candidate
+INPUT VIEWS
+    ↓
+Preflight técnico
+    ↓
+Limpieza alpha/RGB
+    ↓
+Registro anatómico conjunto
+    ↓
+Canonical view set
+    ↓
+Baseline de conditioning
+    ↓
+Candidate generation:
+  - Hunyuan3D-2mv normal
+  - Hunyuan3D-2mv turbo
+  - seeds múltiples
+  - thresholds múltiples
+    ↓
+Raw artifact preservation
+    ↓
+Canonical renders
+    ↓
+Hard gates + scoring
+    ↓
+Selected high mesh
+    ↓
+3D part segmentation
+    ↓
+Body template wrap + per-part retopo
+    ↓
+Recompose
+    ↓
+UV + high-to-low bake
+    ↓
+Paint/materials
+    ↓
+Rig + weights
+    ↓
+Animation QA
+    ↓
+LOD + KTX2
+    ↓
+GLB validation + engine smoke test
 ```
 
-Para un personaje T-pose:
+---
 
-- esqueleto canónico;
-- proporciones chibi configurables;
-- bounding box corporal;
-- tamaño de cabeza;
-- longitud de brazos;
-- separación de piernas.
+# 10. Matriz de diagnóstico obligatoria
 
-Opcional:
+## Etapa A — Instalación
 
-```text
-voxel-controlled candidate
-```
+| Caso | Input | Modelo | Workflow | Resultado esperado |
+|---|---|---|---|---|
+| A1 | oficial | normal | oficial | mesh correcto |
+| A2 | oficial | turbo | oficial turbo | mesh correcto |
+| A3 | oficial | normal | workflow propio | comparable a A1 |
+| A4 | oficial | turbo | workflow propio | comparable a A2 |
 
-a partir de la mejor malla 2mv reparada.
+Si A1 falla, no continuar con Jace.
 
-## Etapa 5 — Scoring
+## Etapa B — Vistas
 
-Renderizar cada candidato:
-
-```text
-front
-left
-back
-right
-front_3q
-back_3q
-top
-```
-
-Métricas:
-
-```text
-silhouette_iou
-semantic_part_iou
-keypoint_error
-head_body_ratio_error
-arm_separation
-leg_separation
-symmetry
-mesh_components
-non_manifold_edges
-degenerate_faces
-normal_consistency
-surface_noise
-```
-
-Pesos recomendados para personajes:
-
-```yaml
-weights:
-  semantic_part_iou: 0.25
-  silhouette_iou: 0.20
-  keypoint_error: 0.15
-  pose_accuracy: 0.15
-  mesh_health: 0.10
-  part_separability: 0.10
-  surface_noise: 0.05
-```
-
-## Etapa 6 — Hunyuan3D-Part
-
-Aplicar P3-SAM y X-Part.
-
-Objetivo:
-
-- separar partes que deben tener material distinto;
-- separar partes rígidas;
-- preservar piezas con movimiento secundario;
-- obtener boundaries que guíen retopología;
-- evitar una malla monolítica.
-
-## Etapa 7 — Clasificación por parte
-
-```text
-organic_deforming
-organic_rigid
-cloth_deforming
-cloth_rigid
-hair_rigid
-hair_secondary_motion
-hard_surface
-accessory
-```
-
-Ejemplo para el personaje:
-
-| Parte | Clase |
+| Caso | Vistas |
 |---|---|
-| body | organic_deforming |
-| hair_front | hair_rigid |
-| ponytail | hair_secondary_motion |
-| top | cloth_deforming |
-| shorts | cloth_deforming |
-| skirt_panel | cloth_deforming |
-| gloves | cloth_deforming |
-| boots | hard_surface |
-| belt | hard_surface |
-| red_accessories | accessory |
+| B1 | front |
+| B2 | front + left |
+| B3 | front + left + back |
+| B4 | front + left + back + right |
 
-## Etapa 8 — Retopología
+## Etapa C — Extracción
 
-### Cuerpo y ropa deformable
+Usar el mismo latent:
 
-No depender solo de AutoRemesher.
+| Caso | Octree | Threshold |
+|---|---:|---:|
+| C1 | 256 | 0.60 |
+| C2 | 380 | 0.60 |
+| C3 | 380 | 0.55 |
+| C4 | 380 | 0.50 |
+| C5 | 380 | 0.45 |
 
-Flujo:
+## Etapa D — Checkpoint
 
-```text
-repair
--> symmetry
--> template humanoid wrap
--> AutoRemesher/QuadriFlow candidate
--> enforce joint loops
--> shrinkwrap/projection
--> deformation test
-```
-
-La plantilla debe permitir perfiles:
-
-```text
-normal_anime
-chibi_4_heads
-chibi_5_heads
-```
-
-Loops obligatorios:
-
-- cuello;
-- hombro;
-- axila;
-- codo;
-- muñeca;
-- pelvis;
-- ingle;
-- rodilla;
-- tobillo.
-
-### Botas y accesorios
-
-```text
-voxel repair
--> planar regions
--> hard edge detection
--> limited dissolve
--> bevel
--> weighted normals
--> deterministic triangulation
-```
-
-### Cabello
-
-No usar voxel remesh agresivo en mechones.
-
-- preservar silueta;
-- separar coleta;
-- simplificar planos internos;
-- crear pivotes;
-- asignar huesos auxiliares si se anima;
-- colisión simple con espalda.
-
-## Etapa 9 — UV y bake
-
-```text
-final low-poly
--> UV seams
--> atlas
--> bake from selected high mesh
--> seam dilation
--> validation
-```
-
-Para móvil:
-
-```text
-1 atlas corporal
-1 atlas cabello/accesorios como máximo
-```
-
-## Etapa 10 — Hunyuan3D-Paint
-
-Dos perfiles:
-
-```text
-toon_mobile
-pbr_mobile
-```
-
-Para el estilo de la referencia se recomienda:
-
-- base color limpio;
-- roughness simple;
-- normal moderada;
-- mask de outline;
-- ramp toon en el motor;
-- evitar microdetalle PBR que no sobrevivirá en móvil.
-
-## Etapa 11 — Rigging
-
-### Candidato automático
-
-`RigAnything` puede generar esqueleto y skinning en flujo no comercial.
-
-### Fallback y normalización
-
-Rigify:
-
-1. colocar meta-rig usando keypoints y bounding boxes 3D;
-2. generar rig;
-3. parent con automatic weights;
-4. corregir pesos;
-5. añadir huesos de cabello y faldón;
-6. exportar solo huesos deformantes.
-
-La salida final debe usar un esqueleto estable del proyecto, aunque RigAnything proponga otro.
-
-## Etapa 12 — Animation QA
-
-Animaciones obligatorias:
-
-```text
-idle
-walk
-run
-jump
-crouch
-arms_up
-arms_forward
-elbow_bend
-deep_knee_bend
-torso_twist
-```
-
-Fallar si existe:
-
-- vértice sin peso;
-- influencia superior al límite;
-- colapso grave en axila/ingle;
-- penetración de coleta;
-- botas deformándose como piel;
-- faldón unido a la pierna incorrecta;
-- volumen perdido;
-- normales invertidas.
-
-## Etapa 13 — Mobile optimization
-
-Perfil inicial:
-
-```yaml
-android_mid_character:
-  lod0_triangles: 28000
-  lod1_triangles: 14000
-  lod2_triangles: 6500
-  lod3_triangles: 2200
-  max_materials: 2
-  max_vertex_influences: 4
-  max_deform_bones: 75
-  texture_lod0: 2048
-  texture_lod1: 1024
-  compression: ktx2
-```
+| Caso | Variante | Steps | Guidance |
+|---|---|---:|---|
+| D1 | normal | oficial | oficial |
+| D2 | normal | 30 | documentado |
+| D3 | turbo | oficial | oficial turbo |
+| D4 | turbo | configuración actual | configuración actual |
 
 ---
 
-## 8. Estrategia de candidatos sin TRELLIS ni Tripo
+# 11. Definition of Done técnica
 
-La diversidad no tiene que venir de proveedores diferentes. Puede obtenerse con:
+El problema de “GLB de mierda” se considera resuelto únicamente cuando:
 
-- seeds;
-- variantes normal/turbo;
-- pasos;
-- thresholds;
-- Hunyuan3D-2mv;
-- Hunyuan3D-Omni pose;
-- Hunyuan3D-Omni voxel;
-- diferentes paquetes multivista corregidos.
-
-Matriz:
-
-| Candidato | Modelo | Condición |
-|---|---|---|
-| A1–A4 | Hunyuan3D-2mv | varias seeds |
-| B1–B2 | Hunyuan3D-2mv Turbo | varias seeds |
-| C1–C2 | Hunyuan3D-Omni | pose |
-| D1 | Hunyuan3D-Omni | voxel de mejor A |
-
-Esto evita depender de TRELLIS/Tripo y conserva un ensemble real.
+- el workflow está versionado y puede clonarse;
+- la baseline oficial genera una malla válida;
+- los hashes de modelos están registrados;
+- el conditioning usa los componentes correctos;
+- las vistas canónicas están alineadas;
+- se preservan brazos, piernas, cabeza y cabello;
+- existe separación espacial suficiente en T-pose;
+- el mesh raw se guarda antes de modificarlo;
+- el pipeline rechaza candidatos defectuosos;
+- se genera más de un candidato;
+- el mejor se selecciona con métricas;
+- la retopología no depende de decimation simple;
+- existe rigging validado;
+- existen LOD;
+- el GLB pasa validación y smoke test en motor.
 
 ---
 
-## 9. Gates de calidad
+# 12. Prioridad recomendada
 
-## Input
+## P0 — Antes de seguir generando
 
-- [ ] Fondo limpio.
-- [ ] Alfa real o fondo uniforme.
-- [ ] Sin tablero horneado.
-- [ ] Vistas consistentes.
-- [ ] T-pose dentro de tolerancia.
-- [ ] Brazos y piernas visibles.
+1. Sacar workflow/custom nodes del gitlink.
+2. Congelar baseline oficial.
+3. Separar normal y turbo.
+4. Auditar image encoder y conditioning.
+5. Registrar octree, chunks, threshold y algoritmo.
+6. Desactivar postproceso y guardar raw.
+7. Cambiar `passed_gates=True` por estado no evaluado.
 
-## Raw geometry
+## P1 — Calidad de reconstrucción
 
-- [ ] Silueta aceptable en cuatro vistas.
-- [ ] Cabeza presente.
-- [ ] Brazos presentes y separados.
-- [ ] Piernas presentes y separadas.
-- [ ] Cabello reconocible.
-- [ ] Sin ruido volumétrico severo.
-- [ ] Sin caras degeneradas.
+1. Registro anatómico conjunto.
+2. A/B de 3 vs 4 vistas.
+3. Barrido de seeds y thresholds.
+4. Renders canónicos.
+5. Hard gates.
+6. Candidate ranking.
 
-## Parts
+## P2 — Producción
 
-- [ ] Partes semánticas nombradas.
-- [ ] Coleta separada.
-- [ ] Botas separadas.
-- [ ] Guantes identificados.
-- [ ] Ropa y cuerpo diferenciados.
-- [ ] Confianza registrada.
-
-## Topology
-
-- [ ] Presupuesto de triángulos.
-- [ ] Loops de articulación.
-- [ ] Hard edges correctos.
-- [ ] Sin microcomponentes.
-- [ ] Malla manifold final.
-- [ ] Deformación validada.
-
-## Rig
-
-- [ ] Ningún vértice sin peso.
-- [ ] Suma de pesos válida.
-- [ ] Máximo cuatro influencias.
-- [ ] Jerarquía válida.
-- [ ] Esqueleto normalizado.
-- [ ] Huesos auxiliares controlados.
-
-## Export
-
-- [ ] GLB válido.
-- [ ] LOD incluidos.
-- [ ] Texturas KTX2 o fuente convertible.
-- [ ] Clips de prueba.
-- [ ] Manifest.
-- [ ] QC report.
-- [ ] Reimportación en Blender.
-- [ ] Smoke test en motor.
+1. Segmentación 3D.
+2. Template wrap corporal.
+3. Retopología por parte.
+4. UV/bake.
+5. Paint.
+6. Rigging.
+7. QA.
+8. LOD y export.
 
 ---
 
-## 10. Roadmap revisado
+## Veredicto
 
-### Fase 0 — Recuperar implementación real
-
-- versionar custom nodes;
-- versionar scripts Blender;
-- eliminar rutas absolutas;
-- congelar resultado actual.
-
-### Fase 1 — Multiview y preflight
-
-- true alpha;
-- checkerboard detector;
-- canonical views;
-- SAM 3.1;
-- consistency gate.
-
-### Fase 2 — Geometría Hunyuan
-
-- Hunyuan3D-2mv;
-- candidate batch;
-- Hunyuan3D-Omni pose;
-- scoring.
-
-### Fase 3 — Segmentación y topología
-
-- Hunyuan3D-Part;
-- P3-SAM;
-- X-Part;
-- template wrapping;
-- AutoRemesher;
-- OpenVDB.
-
-### Fase 4 — Textura y rig
-
-- UV/bake;
-- Hunyuan3D-Paint;
-- RigAnything;
-- Rigify;
-- animation QA.
-
-### Fase 5 — Producción móvil
-
-- LOD;
-- KTX2;
-- draw-call budgets;
-- GLB validation;
-- benchmarks.
-
-### Fase 6 — Texto a paquete multivista
-
-- HunyuanImage-3.0-Instruct/Distil;
-- generación de vista frontal;
-- derivación de laterales/posterior;
-- SAM 3.1 consistency;
-- regeneración automática cuando falle.
-
----
-
-## 11. Decisiones finales
-
-1. El backbone multiview es `Hunyuan3D-2mv`.
-2. Hunyuan3D-2.1 estándar no se presenta como backend multiview.
-3. Hunyuan3D-Omni se usa para pose y control geométrico.
-4. SAM 3.1 segmenta las referencias 2D.
-5. Hunyuan3D-Part segmenta y recompone partes 3D.
-6. Hunyuan3D-Paint se ejecuta después de topología y UV.
-7. No se incluyen modelos o runtimes de Tripo.
-8. No se incluye TRELLIS.
-9. La retopología de personaje usa plantilla más AutoRemesher, no simple decimation.
-10. RigAnything es candidato no comercial; Rigify es fallback determinista.
-11. La primera malla nunca se exporta automáticamente.
-12. ComfyUI queda como UI y orquestador visual.
-
----
-
-## 12. Fuentes primarias
-
-- Hunyuan3D-2mv: `https://huggingface.co/tencent/Hunyuan3D-2mv`
-- Hunyuan3D-2.1: `https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1`
-- Hunyuan3D-Omni: `https://github.com/Tencent-Hunyuan/Hunyuan3D-Omni`
-- Hunyuan3D-Part: `https://github.com/Tencent-Hunyuan/Hunyuan3D-Part`
-- SAM 3 / 3.1: `https://github.com/facebookresearch/sam3`
-- HunyuanImage-3.0: `https://github.com/Tencent-Hunyuan/HunyuanImage-3.0`
-- RigAnything: `https://github.com/Isabella98Liu/RigAnything`
-- Blender Rigify: `https://docs.blender.org/manual/en/latest/addons/rigging/rigify/`
-- Blender retopology: `https://docs.blender.org/manual/en/latest/modeling/meshes/retopology.html`
-- AutoRemesher: `https://github.com/huxingyi/autoremesher`
-
----
-
-## 13. Nota de licencia
-
-El diseño técnico no depende de uso comercial. Aun así, el manifest debe registrar la licencia y revisión de cada checkpoint. Que un repositorio o peso sea descargable públicamente en Hugging Face no equivale necesariamente a una licencia OSI.
-
-Para este proyecto se propone:
-
-```text
-license_mode: private_noncommercial_research
-```
-
-El sistema mostrará el aviso y guardará aceptación, pero la decisión de uso corresponde al operador.
+La transparencia ya no es suficiente para explicar el fallo. El sistema sigue vulnerable en el **núcleo de inferencia y extracción**, y además acepta cualquier GLB como si fuera un candidato válido. Antes de invertir en rigging, pintura o optimización móvil, debe demostrarse que la etapa Hunyuan3D-2mv produce consistentemente una silueta humana completa con el workflow oficial y con parámetros registrados.

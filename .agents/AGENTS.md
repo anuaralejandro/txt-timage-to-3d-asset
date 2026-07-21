@@ -19,7 +19,12 @@ Este archivo contiene las directrices principales y el mapa de conocimiento ("Gr
            [Node 3: LocalConceptImageNode]                                   [Node 4: LocalTextureGeneratorNode]
            (ComfyBridge ➔ Stable Diffusion)                                 (ComfyBridge ➔ Texture Prompts)
                         │                                                                 │
-                  (Concept Image)                                                         │
+                 (Concept Image)                                                          │
+                        │                                                                 │
+           [Node X: Image Processing] ◄── [Node Y: LoadMultiviewDirectoryNode]            │
+           (RemoveFakeBackgroundNode,             (Load Local Views)                      │
+           RemoveMultiviewFakeBackgroundNode,                                             │
+           ApplyManualMaskNode)                                                           │
                         │                                                                 │
                         ▼                                                                 │
            [Node 5: LocalHunyuanNode] ◄───────────────────────────────────────────────────┘
@@ -36,13 +41,15 @@ Este archivo contiene las directrices principales y el mapa de conocimiento ("Gr
            ▼                         ▼
 [Node 7: SaveManifestNode]    [Node 8: Preview3DNode]
 (manifest.json Report)        (ComfyUI 3D Viewer Canvas)
+
+[Node 9: HunyuanMacroPipelineNode] ── (Orquestador All-in-One de todo el proceso)
 ```
 
 ---
 
 ## 2. Componentes Principales del Sistema
 
-1. **Custom Node Suite (`ComfyUI_windows_portable/ComfyUI/custom_nodes/ComfyUI-LocalAssetFactory/`)**:
+1. **Custom Node Suite (`comfyui/ComfyUI-LocalAssetFactory/`)**:
    - `nodes.py`: Registra los 7/8 nodos interactivos de ComfyUI.
    - `schemas.py`: Modelos Pydantic (`AssetRequest`, `AssetSpecification`, `TexturePromptSet`).
    - `config.py`: Variables de entorno y configuración general de la pipeline.
@@ -55,7 +62,7 @@ Este archivo contiene las directrices principales y el mapa de conocimiento ("Gr
      - `manifest_writer.py`: Generador del reporte final `manifest.json`.
      - `output_manager.py`: Administrador de estructura de carpetas de salida.
    - `blender/`: Scripts Python independientes para Blender (`process_mesh.py`, `render_glb_previews.py`).
-   - `workflows/`: Workflows visuales JSON (`full_text_to_asset_v2.json`, `hunyuan_multiview_v1.json`, `concept_image_v1.json`).
+   - `workflows/`: Workflows visuales JSON (ahora extraídos en la raíz `workflows/`).
 
 2. **Core ComfyUI Extensible (`ComfyUI_windows_portable/ComfyUI/comfy_extras/nodes_hunyuan3d.py`)**:
    - Nodos nativos de Hunyuan3D-2 (`EmptyLatentHunyuan3Dv2`, `Hunyuan3Dv2ConditioningMultiView`, `VAEDecodeHunyuan3D`, `voxel_to_mesh`).
@@ -82,3 +89,13 @@ Este archivo contiene las directrices principales y el mapa de conocimiento ("Gr
 - **Lectura de Código**: Para depurar o revisar nodos, inspecciona directamente `nodes.py`, `schemas.py` o los submódulos en `services/`.
 - **Modificación del Core**: Al modificar archivos core de ComfyUI (ej: `comfy_extras/nodes_hunyuan3d.py`), realiza cambios puntuales y documentados sin romper el contrato base.
 - **Workflows JSON**: Ubicados en `workflows/`. Evita editarlos a mano a menos que sea estrictamente necesario.
+
+---
+
+## 5. Optimización de Tokens con RTK (Rust Token Killer)
+
+Para maximizar la eficiencia y reducir el consumo de tokens en comandos en línea y exploración del repositorio:
+- **Usa RTK**: Para cualquier comando en línea (ej. `git diff`, `npm install`, comandos de construcción, etc.) que genere salidas verbosas.
+- **Evita comandos inline ruidosos sin filtro**: Apóyate en RTK para podar los tokens antes de que la IA los procese. Ejecútalo como prefijo: `rtk <comando>` (ej: `rtk git status`).
+- **Propósito**: RTK intercepta salidas, agrupa datos y elimina ruido (como comentarios repetitivos o espacios), evitando llenar la ventana de contexto.
+- **Disponibilidad**: El repositorio de RTK ha sido descargado en este entorno y debe instalarse vía `cargo install --path .` (o usar la versión global si ya está configurado).

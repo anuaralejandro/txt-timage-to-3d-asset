@@ -1,0 +1,101 @@
+{
+  "_comment": "API-format version of the full pipeline workflow. Uses the same node structure as local_asset_factory_v1.json. This format is suitable for programmatic submission via the ComfyUI /prompt API endpoint.",
+  "1": {
+    "class_type": "AssetFactory_AssetBrief",
+    "inputs": {
+      "asset_name": "Royal Training Sword",
+      "asset_type": "weapon",
+      "description_es": "Espada corta ceremonial para una princesa guerrera. Debe tener una hoja ancha y legible, guarda dorada simple, empuñadura azul y una pequeña gema rosa. El diseño debe ser low poly anime, adecuado para combate en tercera persona y fácil de leer en una pantalla móvil.",
+      "visual_style": "royal_princess_fantasy",
+      "gameplay_role": "hero",
+      "target_platform": "android_mid",
+      "triangle_budget": 2500,
+      "texture_resolution": "512",
+      "seed": 42
+    }
+  },
+  "2": {
+    "class_type": "AssetFactory_OllamaPromptArchitect",
+    "inputs": {
+      "ASSET_REQUEST_JSON": ["1", 0],
+      "model": "",
+      "temperature": 0.5,
+      "max_tokens": 2048,
+      "generate_texture_prompts": true,
+      "generate_variants": false
+    }
+  },
+  "3": {
+    "class_type": "AssetFactory_LocalConceptImage",
+    "inputs": {
+      "CONCEPT_IMAGE_PROMPT": ["2", 1],
+      "CONCEPT_NEGATIVE_PROMPT": ["2", 2],
+      "ASSET_SPEC_JSON": ["2", 0],
+      "workflow_path": "",
+      "width": 768,
+      "height": 768,
+      "steps": 20,
+      "cfg": 7.0,
+      "seed": 42,
+      "enabled": true
+    }
+  },
+  "4": {
+    "class_type": "AssetFactory_LocalTextureGenerator",
+    "inputs": {
+      "TEXTURE_PROMPT_JSON": ["2", 3],
+      "ASSET_SPEC_JSON": ["2", 0],
+      "workflow_path": "",
+      "generate_base_color": true,
+      "generate_ornament_variant": false,
+      "tileable_mode": false,
+      "width": 512,
+      "height": 512,
+      "steps": 20,
+      "cfg": 7.0,
+      "seed": 42,
+      "enabled": true
+    }
+  },
+  "5": {
+    "class_type": "AssetFactory_LocalTrellis",
+    "inputs": {
+      "IMAGE": ["3", 0],
+      "IMAGE_PATH": ["3", 1],
+      "ASSET_SPEC_JSON": ["2", 0],
+      "workflow_path": "",
+      "generate_3d": true,
+      "quality_mode": "fast",
+      "seed": 42,
+      "timeout_seconds": 300
+    }
+  },
+  "6": {
+    "class_type": "AssetFactory_BlenderProcessor",
+    "inputs": {
+      "MODEL_PATH": ["5", 0],
+      "TEXTURE_PATHS_JSON": ["4", 0],
+      "ASSET_SPEC_JSON": ["2", 0],
+      "blender_executable": "",
+      "optimize_mesh": true,
+      "assign_texture": true,
+      "generate_previews": true,
+      "create_glb": true,
+      "create_fbx": false,
+      "enabled": true
+    }
+  },
+  "7": {
+    "class_type": "AssetFactory_SaveManifest",
+    "inputs": {
+      "ASSET_REQUEST_JSON": ["1", 0],
+      "ASSET_SPEC_JSON": ["2", 0],
+      "IMAGE_PATH": ["3", 1],
+      "TEXTURE_PATHS_JSON": ["4", 0],
+      "MODEL_PATH": ["5", 0],
+      "PROCESSED_MODEL_PATH": ["6", 0],
+      "PREVIEW_RENDER_PATHS_JSON": ["6", 1],
+      "BLENDER_REPORT_JSON": ["6", 2]
+    }
+  }
+}

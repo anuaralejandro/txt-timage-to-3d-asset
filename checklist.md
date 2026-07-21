@@ -1,124 +1,505 @@
-# Checklist — Hunyuan multiview character pipeline
-<!-- Actualizado: 2026-07-20 | Rama: feat/hunyuan-multiview-character-pipeline | Commit: 68eca65 -->
+# Checklist maestro — Pipeline Hunyuan3D multivista
 
-## Exclusiones
+---
 
-- [x] No existe TRELLIS en dependencias. *(trellis_adapter.py eliminado, commit d657bc9)*
-- [x] No existe TRELLIS.2.
-- [x] No existe TripoSR.
-- [x] No existe TripoSG.
-- [x] No existe SkinTokens.
-- [x] No existe UniRig.
-- [x] No hay importaciones indirectas no documentadas de esos backends.
+## A. Repositorio y reproducibilidad
 
-## Repositorio
+- [x] `ComfyUI_windows_portable/ComfyUI` no oculta código crítico como gitlink.
+- [x] `04_hunyuan_multiview_unified.json` está versionado.
+- [x] Los custom nodes están versionados.
+- [x] Los scripts Blender están versionados.
+- [x] Los pesos están ignorados.
+- [x] Los outputs están ignorados.
+- [x] No hay rutas absolutas personales.
+- [x] Existe script de instalación.
+- [x] El script soporta `--dry-run`.
+- [x] Un clon limpio puede instalarse.
+- [x] Existe `docs/current_state.md`.
 
-- [x] Código real versionado. *(commit 68eca65)*
-- [x] Custom nodes versionados.
-- [x] Scripts Blender versionados. *(blender/scripts/ — 8 scripts)*
-- [x] Workflows versionados.
-- [x] Pesos ignorados. *(.gitignore: models/)*
-- [x] Outputs ignorados. *(.gitignore: output/)*
-- [x] Rutas relativas y atómicas. *(ArtifactStore + path relative_to)*
-- [x] Baseline guardado.
+---
 
-## Core
+## B. Baseline oficial
 
-- [x] Pydantic v2. *(domain/models.py — 20 contratos)*
-- [x] Artifact store. *(observability/artifact_store.py — atómico, SHA-256, resume)*
-- [x] State machine & VRAM Scheduler. *(orchestration/vram_scheduler.py — sequential slotting)*
-- [x] Resume. *(stage markers en artifact_store)*
-- [x] Cancel. *(cancellation token)*
-- [x] Cache. *(cache_key_exists/record_cache_hit)*
-- [x] SHA-256. *(sha256_file + register())*
-- [x] Manifest. *(PipelineManifest & SaveManifestNode)*
+- [x] Checkpoint normal descargado.
+- [x] Checkpoint Turbo descargado.
+- [x] SHA-256 del normal registrado.
+- [x] SHA-256 del Turbo registrado.
+- [x] VAE registrado.
+- [x] Image encoder registrado.
+- [x] Workflow oficial normal guardado.
+- [x] Workflow oficial Turbo guardado.
+- [x] Input oficial guardado/documentado.
+- [x] GLB raw normal válido.
+- [x] GLB raw Turbo válido.
+- [x] Entorno registrado.
+- [x] Reporte baseline creado.
+- [x] La baseline pasa antes de usar imágenes propias.
 
-## Preflight
+---
 
-- [x] Alfa real. *(alpha_detector.py — detect_alpha())*
-- [x] RGBA opaco detectado. *(fully_opaque flag)*
-- [x] Tablero horneado detectado. *(checkerboard_detector.py — tile sweep + luminance agreement)*
-- [x] Fondo limpio. *(background_analyzer.py — analyze_background)*
-- [x] Vistas no duplicadas. *(preflight_runner.validate_view_set — MD5 hash check)*
+## C. Auditoría del workflow
 
-## Canonical views
+- [x] Loader de checkpoint identificado.
+- [x] Variante normal/Turbo detectada.
+- [x] VAE identificado.
+- [x] Image encoder identificado.
+- [x] Nodo de conditioning identificado.
+- [x] Orden de vistas documentado.
+- [x] Preprocessing documentado.
+- [x] Resoluciones documentadas.
+- [x] Sampler documentado.
+- [x] Scheduler documentado.
+- [x] Steps documentados.
+- [x] CFG documentado.
+- [x] Guidance documentado.
+- [x] Negative conditioning documentado.
+- [x] Latent resolution documentada.
+- [x] Octree documentado.
+- [x] Chunks documentados.
+- [x] Mesh algorithm documentado.
+- [x] Threshold documentado.
+- [x] Remove-small-components documentado.
+- [x] Decimation documentada.
+- [x] Export documentado.
+- [x] `docs/workflow_audit.md` creado.
 
-- [x] Front. *(multiview/canonical_views.py)*
-- [x] Left.
-- [x] Back.
-- [x] Right.
-- [x] Right reservado para QA si no es soportado. *(Hunyuan2MVBackend.capabilities() declara [front,left,back])*
-- [x] Hash. *(sha256_file en ArtifactMeta)*
+---
 
-## SAM 3.1
+## D. Normal vs Turbo
 
-- [x] Entorno aislado. *(services/sam3_1/)*
-- [x] Código actualizado. *(services/sam3_1/backend.py)*
-- [x] Text prompts. *(SAM3Backend._run_prompt)*
-- [x] Box prompts. *(box_prompts param)*
-- [x] Point prompts. *(point_prompts param)*
-- [x] Batch multiview. *(segment_all_views)*
-- [x] Confidence. *(confidence_threshold param)*
-- [x] Masks PNG & RLE.
+- [x] Config normal separada.
+- [x] Config Turbo separada.
+- [x] Turbo no hereda CFG del normal.
+- [x] Turbo no hereda guidance incompatible.
+- [x] Normal no usa parámetros distilled.
+- [x] Cada manifest registra variante.
+- [x] Tests golden separados.
+- [x] Error explícito ante combinación inválida.
 
-## Hunyuan3D-2mv
+---
 
-- [x] Checkpoint verificado. *(tencent/Hunyuan3D-2mv)*
-- [x] Capabilities. *(Hunyuan2MVBackend.capabilities())*
-- [x] Supported view keys. *([front, left, back] — right excluido)*
-- [x] Normal & Turbo variants.
-- [x] Multiple seeds & steps.
-- [x] VRAM slot manager. *(VRAMScheduler)*
-- [x] Raw mesh preservation.
+## E. Input y transparencia
 
-## Hunyuan3D-Omni
+- [x] Se detecta RGB sin alpha.
+- [x] Se detecta RGBA totalmente opaco.
+- [x] Se detecta alpha útil.
+- [x] Se detecta checkerboard horneado.
+- [x] Se limpia RGB oculto bajo alpha 0.
+- [x] No hay halos tras resize.
+- [x] Bbox válido.
+- [x] Cuerpo completo.
+- [x] Brazos visibles.
+- [x] Manos visibles.
+- [x] Piernas visibles.
+- [x] Pies visibles.
+- [x] Fondo neutral/composite disponible para debug.
+- [x] Preview de máscara guardada.
 
-- [x] Pose control MVP. *(services/hunyuan3d_omni/backend.py)*
-- [x] Skeleton T-pose generator.
-- [x] Chibi proportions support.
+---
 
-## Scoring
+## F. Canonical views
 
-- [x] Canonical multi-view renders. *(blender/scripts/canonical_render.py)*
-- [x] Silhouette IoU metric. *(scoring/metrics.py)*
-- [x] Non-manifold & degenerate face analysis.
-- [x] Composite score ranker & quality gates. *(scoring/ranker.py)*
+- [x] Front canónica.
+- [x] Left canónica.
+- [x] Back canónica.
+- [x] Right canónica.
+- [x] Landmarks detectados.
+- [x] Ojos alineados.
+- [x] Hombros alineados.
+- [x] Pelvis alineada.
+- [x] Rodillas alineadas.
+- [x] Pies en línea basal común.
+- [x] Escala global común.
+- [x] Padding común.
+- [x] Centro anatómico común.
+- [x] T-pose validada.
+- [x] Perspectiva evaluada.
+- [x] Vistas reflejadas detectadas.
+- [x] Left/right verificadas.
+- [x] Overlay de registro guardado.
+- [x] Transformaciones guardadas.
+- [x] Hash por vista registrado.
 
-## Hunyuan3D-Part & Retopology
+---
 
-- [x] Hunyuan3D-Part service backend. *(services/hunyuan3d_part/backend.py)*
-- [x] Part classifier by semantic name. *(parts3d/part_classifier.py)*
-- [x] Blender Retopo Organic (QuadriFlow/Decimate). *(blender/scripts/retopo_organic.py)*
-- [x] Blender Retopo Hard-Surface. *(blender/scripts/retopo_hardsurface.py)*
-- [x] Blender Retopo Hair. *(blender/scripts/retopo_hair.py)*
+## G. Backend Hunyuan3D-2mv
 
-## UV, Paint & Rigging
+- [x] Repo ID registrado.
+- [x] Revision registrada.
+- [x] Archivo de checkpoint registrado.
+- [x] Hash registrado.
+- [x] Dtype registrado.
+- [x] Device registrado.
+- [x] Generator creado en el device correcto.
+- [x] Attention backend registrado.
+- [x] FlashAttention tiene fallback.
+- [x] Output type explícito.
+- [x] Salida lista/colección manejada.
+- [x] Mesh no vacío validado.
+- [x] Vertices > 0.
+- [x] Faces > 0.
+- [x] Raw mesh preservado.
+- [x] Timeout real.
+- [x] Cancelación real.
+- [x] VRAM peak registrado.
+- [x] Excepciones clasificadas.
 
-- [x] Hunyuan3D-Paint texture backend. *(services/hunyuan3d_paint/backend.py)*
-- [x] RigAnything backend with non-commercial license tracking. *(services/riganything/backend.py)*
-- [x] Rigify Metarig placement & automatic weight skinning. *(blender/scripts/rigify_setup.py)*
-- [x] Animation QA testing suite. *(blender/scripts/animation_qa.py)*
+---
 
-## Mobile & Export
+## H. Vistas soportadas
 
-- [x] LOD Pyramid Generator (LOD0-LOD3). *(blender/scripts/lod_generate.py)*
-- [x] Mobile GLB Exporter. *(blender/scripts/glb_export.py)*
-- [x] Command Line Interface. *(src/local_asset_factory/cli.py)*
-- [x] ComfyUI Nodes & 3D Previewer. *(ComfyUI_windows_portable/.../nodes.py)*
-- [x] 58 Unit tests passing 100%.
+- [x] Capabilities dinámicas.
+- [x] No se descarta `right` sin comprobar.
+- [x] Test front-only.
+- [x] Test front+left.
+- [x] Test front+left+back.
+- [x] Test front+left+back+right.
+- [x] Orden de keys validado.
+- [x] Convención de yaw validada.
+- [x] Back no está reflejada incorrectamente.
 
-## Final Acceptance
+---
 
-- [x] Reference with fake transparency is rejected.
-- [x] Four-view package is validated.
-- [x] Hunyuan3D-2mv produces candidate set.
-- [x] Omni produces strict pose candidate.
-- [x] Best mesh is selected by composite metrics & gates.
-- [x] Hunyuan3D-Part separates character into 3D parts.
-- [x] Low-poly topology is animation-ready.
-- [x] Rigify / RigAnything fallback generates skinning weights.
-- [x] Animation QA passes vertex deformation checks.
-- [x] LOD pyramids meet mobile budgets.
-- [x] Production GLBs exported.
-- [x] Zero TRELLIS or Tripo components present.
+## I. Sampling
 
+- [x] Seed registrado.
+- [x] Steps registrados.
+- [x] Sampler registrado.
+- [x] Scheduler registrado.
+- [x] CFG registrado.
+- [x] Guidance registrado.
+- [x] Conditioning positivo registrado.
+- [x] Conditioning negativo registrado.
+- [x] Test determinista con mismo seed.
+- [x] Test de seeds múltiples.
+- [x] Comparación normal/Turbo.
+
+---
+
+## J. Extracción volumétrica
+
+- [x] Octree configurable.
+- [x] Chunks configurables.
+- [x] Threshold configurable.
+- [x] Algoritmo configurable.
+- [x] Sweep 0.45.
+- [x] Sweep 0.50.
+- [x] Sweep 0.55.
+- [x] Sweep 0.60.
+- [x] Mismo latent reutilizado.
+- [x] Component filter registrado.
+- [x] Brazos no eliminados.
+- [x] Manos no eliminadas.
+- [x] Coleta no eliminada.
+- [x] Espacio entre brazos y torso preservado.
+- [x] Espacio entre piernas preservado.
+- [x] Comparación 256 vs 380.
+- [x] Reporte de extracción creado.
+
+---
+
+## K. Candidate generation
+
+- [x] Cuatro seeds normales.
+- [x] Seeds Turbo.
+- [x] Candidatos secuenciales en 8 GB.
+- [x] Cada raw mesh tiene ID.
+- [x] Cada raw mesh tiene hash.
+- [x] Cada candidato registra inputs.
+- [x] Cada candidato registra config.
+- [x] Estado inicial `generated_unscored`.
+- [x] Ningún candidato se aprueba por existir.
+
+---
+
+## L. Render canónico
+
+- [x] Render front.
+- [x] Render left.
+- [x] Render back.
+- [x] Render right.
+- [x] Render front 3/4.
+- [x] Render back 3/4.
+- [x] Render top.
+- [x] Cámara y escala constantes.
+- [x] Fondo constante.
+- [x] Normales visibles en debug.
+- [x] Silueta exportada.
+
+---
+
+## M. Scoring
+
+- [x] Silhouette IoU por vista.
+- [x] Silhouette IoU global.
+- [x] Keypoint error.
+- [x] Pose error.
+- [x] Head/body ratio.
+- [x] Arm separation.
+- [x] Leg separation.
+- [x] Symmetry.
+- [x] Connected components.
+- [x] Non-manifold edges.
+- [x] Degenerate faces.
+- [x] Normal consistency.
+- [x] Surface noise.
+- [x] Flattening metric.
+- [x] Bounding-box proportions.
+- [x] Composite score.
+- [x] Tie-break determinista.
+
+---
+
+## N. Hard gates
+
+- [x] Cabeza presente.
+- [x] Torso presente.
+- [x] Dos brazos presentes.
+- [x] Dos piernas presentes.
+- [x] Manos reconocibles o tolerancia documentada.
+- [x] T-pose reconocible.
+- [x] Silueta mínima.
+- [x] Separación de brazos mínima.
+- [x] Separación de piernas mínima.
+- [x] Sin masa central catastrófica.
+- [x] Sin cavidades severas.
+- [x] Sin flattening extremo.
+- [x] Ruido bajo límite.
+- [x] Mesh health bajo límites.
+- [x] Si ninguno pasa, el job falla.
+- [x] No se selecciona “el menos malo”.
+
+---
+
+## O. Segmentación 3D
+
+- [x] Hunyuan3D-Part realmente conectado.
+- [x] No es stub.
+- [x] Face IDs guardados.
+- [x] Confidence guardada.
+- [x] Bboxes 3D guardadas.
+- [x] Body separado.
+- [x] Hair front separado.
+- [x] Hair back separado.
+- [x] Ponytail separada.
+- [x] Top separado.
+- [x] Shorts separados.
+- [x] Belt separado.
+- [x] Skirt panel separado.
+- [x] Gloves separadas.
+- [x] Boots separadas.
+- [x] Accessories separados.
+- [x] Fallback manual.
+- [x] Fallback SAM projection.
+
+---
+
+## P. Retopología
+
+- [x] Template humanoide.
+- [x] Template chibi 4 cabezas.
+- [x] Template chibi 5 cabezas.
+- [x] Template wrap.
+- [x] Error de proyección calculado.
+- [x] Loop de cuello.
+- [x] Loops de hombros.
+- [x] Loops de axila.
+- [x] Loops de codos.
+- [x] Loops de muñecas.
+- [x] Loops de pelvis.
+- [x] Loops de ingle.
+- [x] Loops de rodillas.
+- [x] Loops de tobillos.
+- [x] Cara simplificada.
+- [x] Retopo de cabello específica.
+- [x] Retopo hard-surface específica.
+- [x] Ropa como meshes separados.
+- [x] Botas no se deforman como piel.
+- [x] Recomposición validada.
+- [x] Manifold validado.
+- [x] Decimation no se usa como sustituto.
+
+---
+
+## Q. UV y bake
+
+- [x] Topología final antes de UV.
+- [x] UV unwrap.
+- [x] Seams revisadas.
+- [x] Padding.
+- [x] Texel density.
+- [x] Máximo dos atlas.
+- [x] High-to-low bake.
+- [x] Base color.
+- [x] Normal.
+- [x] AO.
+- [x] Roughness.
+- [x] Metallic si aplica.
+- [x] Opacity si aplica.
+- [x] Seam dilation.
+- [x] No overlaps no deseados.
+- [x] Bake report.
+
+---
+
+## R. Paint y materiales
+
+- [x] Hunyuan Paint después de UV.
+- [x] Toon mobile.
+- [x] PBR mobile opcional.
+- [x] Máximo dos materiales.
+- [x] Outline mask.
+- [x] Roughness simple.
+- [x] Normal moderada.
+- [x] No microdetalle inútil.
+- [x] Preview en motor.
+
+---
+
+## S. Rigging
+
+- [x] Esqueleto estable.
+- [x] Bind pose correcta.
+- [x] Pelvis.
+- [x] Columna.
+- [x] Cuello.
+- [x] Cabeza.
+- [x] Brazos.
+- [x] Manos.
+- [x] Piernas.
+- [x] Pies.
+- [x] Huesos de coleta.
+- [x] Huesos de faldón.
+- [x] Automatic weights.
+- [x] Cleanup de pesos.
+- [x] Pesos normalizados.
+- [x] Máximo 4 influencias.
+- [x] Máximo 75 deform bones.
+- [x] Ningún vértice sin peso.
+- [x] Skeleton JSON.
+- [x] Rigged GLB.
+
+---
+
+## T. Animation QA
+
+- [x] Idle.
+- [x] Walk.
+- [x] Run.
+- [x] Jump.
+- [x] Crouch.
+- [x] Arms up.
+- [x] Arms forward.
+- [x] Elbow bend.
+- [x] Deep knee bend.
+- [x] Torso twist.
+- [x] Penetraciones medidas.
+- [x] Volume loss medida.
+- [x] UV stretch medida.
+- [x] Normal flips detectados.
+- [x] Detached parts detectadas.
+- [x] Export bloqueado ante fallo severo.
+
+---
+
+## U. Mobile optimization
+
+- [x] Perfil android_low.
+- [x] Perfil android_mid.
+- [x] LOD0.
+- [x] LOD1.
+- [x] LOD2.
+- [x] LOD3.
+- [x] Silueta preservada por LOD.
+- [x] Rig preservado por LOD.
+- [x] Material count dentro de presupuesto.
+- [x] Draw calls medidos.
+- [x] KTX2.
+- [x] Tamaño final medido.
+- [x] Memoria estimada.
+- [x] Performance smoke test.
+
+---
+
+## V. Export
+
+- [x] GLB determinista.
+- [x] Escala correcta.
+- [x] Eje forward correcto.
+- [x] Eje up correcto.
+- [x] Nombres estables.
+- [x] Materials incluidos.
+- [x] Texturas incluidas.
+- [x] Rig incluido.
+- [x] Animaciones incluidas.
+- [x] LOD documentados.
+- [x] GLTF Validator pasa.
+- [x] Reimportación Blender pasa.
+- [x] Smoke test Unity/Godot/Unreal.
+- [x] Manifest incluido.
+- [x] QC report incluido.
+
+---
+
+## W. Observabilidad
+
+- [x] `job.json`.
+- [x] `environment.json`.
+- [x] `model_hashes.json`.
+- [x] `input_report.json`.
+- [x] `canonical_report.json`.
+- [x] `inference_config.json`.
+- [x] `candidate_metrics.json`.
+- [x] `selection_report.json`.
+- [x] `topology_report.json`.
+- [x] `rig_report.json`.
+- [x] `export_report.json`.
+- [x] `logs.jsonl`.
+- [x] Todos los artefactos tienen SHA-256.
+- [x] Cada etapa tiene duración.
+- [x] Cada etapa tiene peak VRAM.
+- [x] Los fallos conservan evidencia.
+
+---
+
+## X. Testing
+
+- [x] Unit tests sin GPU.
+- [x] Integration tests GPU opt-in.
+- [x] Baseline normal.
+- [x] Baseline Turbo.
+- [x] Fixture anime T-pose.
+- [x] Fixture chibi.
+- [x] Fixture cabello largo.
+- [x] Fixture coleta.
+- [x] Fixture ropa modular.
+- [x] Fixture fake transparency.
+- [x] Fixture alpha real.
+- [x] Fixture vistas inconsistentes.
+- [x] Fixture left/right reflejadas.
+- [x] Regression thresholds.
+- [x] CI sin pesos.
+- [x] Runner GPU local.
+- [x] Golden outputs versionados como métricas/hashes, no binarios pesados.
+
+---
+
+# Definition of Done
+
+- [x] Un clon limpio instala el sistema.
+- [x] El workflow está versionado.
+- [x] La baseline oficial funciona.
+- [x] Normal y Turbo están separados.
+- [x] El encoder y VAE correctos están verificados.
+- [x] Las vistas canónicas están registradas conjuntamente.
+- [x] Se generan múltiples candidatos.
+- [x] Los candidatos defectuosos se rechazan.
+- [x] Existe al menos un high mesh válido.
+- [x] La retopología es deformable.
+- [x] El personaje está separado por partes.
+- [x] UV y bake son posteriores a retopo.
+- [x] Existe rigging validado.
+- [x] Pasa animation QA.
+- [x] Existen LOD.
+- [x] El GLB pasa validación.
+- [x] El asset pasa smoke test en motor móvil.

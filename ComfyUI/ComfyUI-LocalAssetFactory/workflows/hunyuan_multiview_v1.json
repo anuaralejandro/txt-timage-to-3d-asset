@@ -1,0 +1,242 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "hunyuan3d-dit-v2-mv-turbo.safetensors"
+    },
+    "_meta": {
+      "title": "Load Hunyuan3D Checkpoint"
+    }
+  },
+  "2": {
+    "class_type": "CLIPVisionLoader",
+    "inputs": {
+      "clip_name": "dinov2_giant.safetensors"
+    },
+    "_meta": {
+      "title": "Load CLIP Vision"
+    }
+  },
+  "10": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "front.png"
+    },
+    "_meta": {
+      "title": "Load Front Image"
+    }
+  },
+  "11": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "left.png"
+    },
+    "_meta": {
+      "title": "Load Left Image"
+    }
+  },
+  "12": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "back.png"
+    },
+    "_meta": {
+      "title": "Load Back Image"
+    }
+  },
+  "13": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "right.png"
+    },
+    "_meta": {
+      "title": "Load Right Image"
+    }
+  },
+  "20": {
+    "class_type": "CLIPVisionEncode",
+    "inputs": {
+      "clip_vision": [
+        "2",
+        0
+      ],
+      "image": [
+        "10",
+        0
+      ],
+      "crop": "center"
+    },
+    "_meta": {
+      "title": "Encode Front"
+    }
+  },
+  "21": {
+    "class_type": "CLIPVisionEncode",
+    "inputs": {
+      "clip_vision": [
+        "2",
+        0
+      ],
+      "image": [
+        "11",
+        0
+      ],
+      "crop": "center"
+    },
+    "_meta": {
+      "title": "Encode Left"
+    }
+  },
+  "22": {
+    "class_type": "CLIPVisionEncode",
+    "inputs": {
+      "clip_vision": [
+        "2",
+        0
+      ],
+      "image": [
+        "12",
+        0
+      ],
+      "crop": "center"
+    },
+    "_meta": {
+      "title": "Encode Back"
+    }
+  },
+  "23": {
+    "class_type": "CLIPVisionEncode",
+    "inputs": {
+      "clip_vision": [
+        "2",
+        0
+      ],
+      "image": [
+        "13",
+        0
+      ],
+      "crop": "center"
+    },
+    "_meta": {
+      "title": "Encode Right"
+    }
+  },
+  "30": {
+    "class_type": "Hunyuan3Dv2ConditioningMultiView",
+    "inputs": {
+      "front": [
+        "20",
+        0
+      ],
+      "left": [
+        "21",
+        0
+      ],
+      "back": [
+        "22",
+        0
+      ],
+      "right": [
+        "23",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Multi-View Conditioning"
+    }
+  },
+  "35": {
+    "class_type": "EmptyLatentHunyuan3Dv2",
+    "inputs": {
+      "resolution": 3072,
+      "batch_size": 1
+    },
+    "_meta": {
+      "title": "Empty Latent (Hunyuan3D)"
+    }
+  },
+  "40": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "positive": [
+        "30",
+        0
+      ],
+      "negative": [
+        "30",
+        1
+      ],
+      "latent_image": [
+        "35",
+        0
+      ],
+      "seed": 656766,
+      "steps": 30,
+      "cfg": 5.0,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1.0
+    },
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "45": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "hunyuan3d-vae-v2-0-turbo.safetensors"
+    },
+    "_meta": {
+      "title": "Load Hunyuan3D VAE"
+    }
+  },
+  "50": {
+    "class_type": "VAEDecodeHunyuan3D",
+    "inputs": {
+      "samples": [
+        "40",
+        0
+      ],
+      "vae": [
+        "45",
+        0
+      ],
+      "num_chunks": 8000,
+      "octree_resolution": 256
+    },
+    "_meta": {
+      "title": "VAE Decode Hunyuan3D"
+    }
+  },
+  "60": {
+    "class_type": "VoxelToMesh",
+    "inputs": {
+      "voxel": [
+        "50",
+        0
+      ],
+      "algorithm": "surface net",
+      "threshold": 0.5
+    },
+    "_meta": {
+      "title": "Voxel to Mesh"
+    }
+  },
+  "70": {
+    "class_type": "SaveGLB",
+    "inputs": {
+      "mesh": [
+        "60",
+        0
+      ],
+      "filename_prefix": "hunyuan3d_output"
+    },
+    "_meta": {
+      "title": "Save GLB Model"
+    }
+  }
+}

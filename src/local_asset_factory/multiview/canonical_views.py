@@ -31,6 +31,7 @@ from PIL import Image
 
 from ..domain.enums import CameraType, ViewOrientation
 from ..domain.models import BoundingBox2D, CanonicalView, CanonicalViewSet, sha256_file
+from .image_alignment import clean_hidden_rgb, calculate_joint_registration
 
 log = logging.getLogger(__name__)
 
@@ -112,6 +113,7 @@ def normalize_view(
     warnings = []
 
     img = Image.open(src).convert("RGBA")
+    img = clean_hidden_rgb(img)
     orig_w, orig_h = img.size
 
     # Detect subject

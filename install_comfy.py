@@ -2,20 +2,19 @@ import os
 import sys
 import subprocess
 import urllib.request
+import zipfile
+import subprocess
 import shutil
 from pathlib import Path
 
 import json
 
 # ComfyUI Portable URL from API
-API_URL = "https://api.github.com/repos/Comfy-Org/ComfyUI/releases/latest"
-TARGET_DIR = r"c:\Users\datam\Videos\ComftyUI-text-2-3d-asset-gen"
+COMFYUI_URL = "https://github.com/comfyanonymous/ComfyUI/releases/latest/download/ComfyUI_windows_portable_nvidia_cu121_or_cpu.7z"
+TARGET_DIR = os.path.dirname(os.path.abspath(__file__))
 SEVEN_ZIP_URL = "https://www.7-zip.org/a/7zr.exe"
 
 def get_latest_url():
-    req = urllib.request.Request(API_URL, headers={'User-Agent': 'Mozilla/5.0'})
-    with urllib.request.urlopen(req) as response:
-        data = json.loads(response.read().decode())
         for asset in data.get('assets', []):
             if 'windows_portable_nvidia' in asset['name']:
                 return asset['browser_download_url']

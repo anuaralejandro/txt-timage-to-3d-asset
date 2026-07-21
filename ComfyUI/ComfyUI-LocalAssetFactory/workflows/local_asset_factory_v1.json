@@ -1,0 +1,182 @@
+{
+  "last_node_id": 7,
+  "last_link_id": 12,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "AssetFactory_AssetBrief",
+      "pos": [50, 200],
+      "size": {"0": 340, "1": 380},
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "outputs": [
+        {"name": "ASSET_REQUEST_JSON", "type": "STRING", "links": [1, 9], "slot_index": 0},
+        {"name": "STATUS", "type": "STRING", "links": [], "slot_index": 1}
+      ],
+      "inputs": [],
+      "properties": {"Node name for S&R": "AssetFactory_AssetBrief"},
+      "widgets_values": ["Royal Training Sword", "weapon", "Espada corta ceremonial para una princesa guerrera. Debe tener una hoja ancha y legible, guarda dorada simple, empuñadura azul y una pequeña gema rosa.", "royal_princess_fantasy", "hero", "android_mid", 2500, "512", 42],
+      "_meta": {"title": "Asset Factory · Asset Brief"}
+    },
+    {
+      "id": 2,
+      "type": "AssetFactory_OllamaPromptArchitect",
+      "pos": [440, 100],
+      "size": {"0": 340, "1": 220},
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {"name": "ASSET_REQUEST_JSON", "type": "STRING", "link": 1}
+      ],
+      "outputs": [
+        {"name": "ASSET_SPEC_JSON", "type": "STRING", "links": [3, 5, 7, 11], "slot_index": 0},
+        {"name": "CONCEPT_IMAGE_PROMPT", "type": "STRING", "links": [2], "slot_index": 1},
+        {"name": "CONCEPT_NEGATIVE_PROMPT", "type": "STRING", "links": [4], "slot_index": 2},
+        {"name": "TEXTURE_PROMPT_JSON", "type": "STRING", "links": [6], "slot_index": 3},
+        {"name": "STATUS", "type": "STRING", "links": [], "slot_index": 4}
+      ],
+      "properties": {"Node name for S&R": "AssetFactory_OllamaPromptArchitect"},
+      "widgets_values": ["qwen2.5:7b-instruct", 0.5, 2048, true, false],
+      "_meta": {"title": "Asset Factory · Ollama Prompt Architect"}
+    },
+    {
+      "id": 3,
+      "type": "AssetFactory_LocalConceptImage",
+      "pos": [840, 100],
+      "size": {"0": 340, "1": 280},
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {"name": "CONCEPT_IMAGE_PROMPT", "type": "STRING", "link": 2},
+        {"name": "CONCEPT_NEGATIVE_PROMPT", "type": "STRING", "link": 4},
+        {"name": "ASSET_SPEC_JSON", "type": "STRING", "link": 3}
+      ],
+      "outputs": [
+        {"name": "IMAGE", "type": "IMAGE", "links": [8], "slot_index": 0},
+        {"name": "IMAGE_PATH", "type": "STRING", "links": [10, 12], "slot_index": 1},
+        {"name": "STATUS", "type": "STRING", "links": [], "slot_index": 2}
+      ],
+      "properties": {"Node name for S&R": "AssetFactory_LocalConceptImage"},
+      "widgets_values": ["", 768, 768, 20, 7.0, 42, true],
+      "_meta": {"title": "Asset Factory · Local Concept Image"}
+    },
+    {
+      "id": 4,
+      "type": "AssetFactory_LocalTextureGenerator",
+      "pos": [840, 450],
+      "size": {"0": 340, "1": 280},
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {"name": "TEXTURE_PROMPT_JSON", "type": "STRING", "link": 6},
+        {"name": "ASSET_SPEC_JSON", "type": "STRING", "link": 5}
+      ],
+      "outputs": [
+        {"name": "TEXTURE_PATHS_JSON", "type": "STRING", "links": [13, 15], "slot_index": 0},
+        {"name": "PREVIEW_TEXTURE_IMAGE", "type": "IMAGE", "links": [], "slot_index": 1},
+        {"name": "STATUS", "type": "STRING", "links": [], "slot_index": 2}
+      ],
+      "properties": {"Node name for S&R": "AssetFactory_LocalTextureGenerator"},
+      "widgets_values": ["", true, false, false, 512, 512, 20, 7.0, 42, true],
+      "_meta": {"title": "Asset Factory · Local Texture Generator"}
+    },
+    {
+      "id": 5,
+      "type": "AssetFactory_LocalHunyuan",
+      "pos": [1240, 100],
+      "size": {"0": 380, "1": 340},
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {"name": "FRONT_IMAGE_PATH", "type": "STRING", "link": 10},
+        {"name": "ASSET_SPEC_JSON",  "type": "STRING", "link": 7}
+      ],
+      "outputs": [
+        {"name": "MODEL_PATH",             "type": "STRING", "links": [14], "slot_index": 0},
+        {"name": "ALL_OUTPUT_PATHS_JSON",  "type": "STRING", "links": [],   "slot_index": 1},
+        {"name": "STATUS",                 "type": "STRING", "links": [],   "slot_index": 2}
+      ],
+      "properties": {"Node name for S&R": "AssetFactory_LocalHunyuan"},
+      "widgets_values": ["", "", true, 2048, 25, 5.0, "surface net", 0.6, 42, "fixed", 600],
+      "_meta": {"title": "Asset Factory · Hunyuan3D-2 Image-to-3D"}
+    },
+    {
+      "id": 6,
+      "type": "AssetFactory_BlenderProcessor",
+      "pos": [1640, 100],
+      "size": {"0": 340, "1": 280},
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {"name": "MODEL_PATH", "type": "STRING", "link": 14},
+        {"name": "TEXTURE_PATHS_JSON", "type": "STRING", "link": 13},
+        {"name": "ASSET_SPEC_JSON", "type": "STRING", "link": 11}
+      ],
+      "outputs": [
+        {"name": "PROCESSED_MODEL_PATH", "type": "STRING", "links": [16], "slot_index": 0},
+        {"name": "PREVIEW_RENDER_PATHS_JSON", "type": "STRING", "links": [17], "slot_index": 1},
+        {"name": "BLENDER_REPORT_JSON", "type": "STRING", "links": [18], "slot_index": 2},
+        {"name": "STATUS", "type": "STRING", "links": [], "slot_index": 3}
+      ],
+      "properties": {"Node name for S&R": "AssetFactory_BlenderProcessor"},
+      "widgets_values": ["", true, true, true, true, false, true],
+      "_meta": {"title": "Asset Factory · Blender Processor"}
+    },
+    {
+      "id": 7,
+      "type": "AssetFactory_SaveManifest",
+      "pos": [2040, 200],
+      "size": {"0": 340, "1": 280},
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {"name": "ASSET_REQUEST_JSON", "type": "STRING", "link": 9},
+        {"name": "ASSET_SPEC_JSON", "type": "STRING", "link": 15},
+        {"name": "IMAGE_PATH", "type": "STRING", "link": 12},
+        {"name": "TEXTURE_PATHS_JSON", "type": "STRING", "link": 15},
+        {"name": "MODEL_PATH", "type": "STRING", "link": null},
+        {"name": "PROCESSED_MODEL_PATH", "type": "STRING", "link": 16},
+        {"name": "PREVIEW_RENDER_PATHS_JSON", "type": "STRING", "link": 17},
+        {"name": "BLENDER_REPORT_JSON", "type": "STRING", "link": 18}
+      ],
+      "outputs": [
+        {"name": "MANIFEST_PATH", "type": "STRING", "links": [], "slot_index": 0},
+        {"name": "MANIFEST_JSON", "type": "STRING", "links": [], "slot_index": 1},
+        {"name": "STATUS", "type": "STRING", "links": [], "slot_index": 2}
+      ],
+      "properties": {"Node name for S&R": "AssetFactory_SaveManifest"},
+      "_meta": {"title": "Asset Factory · Save Manifest"}
+    }
+  ],
+  "links": [
+    [1, 1, 0, 2, 0, "STRING"],
+    [2, 2, 1, 3, 0, "STRING"],
+    [3, 2, 0, 3, 2, "STRING"],
+    [4, 2, 2, 3, 1, "STRING"],
+    [5, 2, 0, 4, 1, "STRING"],
+    [6, 2, 3, 4, 0, "STRING"],
+    [7, 2, 0, 5, 2, "STRING"],
+    [8, 3, 0, 5, 0, "IMAGE"],
+    [9, 1, 0, 7, 0, "STRING"],
+    [10, 3, 1, 5, 1, "STRING"],
+    [11, 2, 0, 6, 2, "STRING"],
+    [12, 3, 1, 7, 2, "STRING"],
+    [13, 4, 0, 6, 1, "STRING"],
+    [14, 5, 0, 6, 0, "STRING"],
+    [15, 2, 0, 7, 1, "STRING"],
+    [16, 6, 0, 7, 5, "STRING"],
+    [17, 6, 1, 7, 6, "STRING"],
+    [18, 6, 2, 7, 7, "STRING"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {"ds": {"scale": 0.7, "offset": [-20, -50]}},
+  "version": 0.4
+}
