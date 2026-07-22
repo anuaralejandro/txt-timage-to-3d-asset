@@ -19,8 +19,14 @@ def test_backend_generate_retains_right_view(monkeypatch):
     
     class MockModel:
         def __call__(self, *args, **kwargs):
-            import trimesh
-            return trimesh.Trimesh(vertices=[[0,0,0], [1,0,0], [0,1,0]], faces=[[0,1,2]])
+            class DummyMesh:
+                def __init__(self):
+                    self.vertices = [[0,0,0], [1,0,0], [0,1,0]]
+                    self.faces = [[0,1,2]]
+                def export(self, path):
+                    with open(path, "w") as f:
+                        f.write("mock")
+            return DummyMesh()
         def enable_model_cpu_offload(self):
             pass
         

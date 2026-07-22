@@ -52,9 +52,10 @@ def test_pipeline_skips_paint_when_disabled():
     assert res["status"] == "unsupported_on_current_hardware"
     
 def test_pipeline_fails_when_all_candidates_fail():
-    cands = [
-        MagicMock(passed_gates=False, id="1"),
-        MagicMock(passed_gates=False, id="2")
-    ]
+    c1 = MagicMock(passed_gates=False, id="1")
+    c1.score = 0.0
+    c2 = MagicMock(passed_gates=False, id="2")
+    c2.score = 0.0
+    cands = [c1, c2]
     winner, _ = rank_candidates(cands)
     assert winner is None

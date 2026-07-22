@@ -1,1 +1,123 @@
-{}
+{
+  "1": {
+    "class_type": "AssetFactory_LoadMultiviewDirectory",
+    "inputs": {
+      "use_directory": true,
+      "directory_path": "C:\\Users\\datam\\Downloads\\jace0",
+      "front_image": "none",
+      "left_image": "none",
+      "right_image": "none",
+      "back_image": "none"
+    },
+    "_meta": {
+      "title": "1. Load Multiview Directory or Images"
+    }
+  },
+  "2": {
+    "class_type": "AssetFactory_RemoveMultiviewFakeBackground",
+    "inputs": {
+      "force_remove": true,
+      "alpha_matting": true,
+      "normalize_scale": true,
+      "output_background": "white",
+      "FRONT_IMAGE": [
+        "1",
+        0
+      ],
+      "LEFT_IMAGE": [
+        "1",
+        1
+      ],
+      "RIGHT_IMAGE": [
+        "1",
+        2
+      ],
+      "BACK_IMAGE": [
+        "1",
+        3
+      ]
+    },
+    "_meta": {
+      "title": "2. Remove Background (AI & Scale Normalization)"
+    }
+  },
+  "3": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "nobg_front",
+      "images": [
+        "2",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "3. Save Front Image"
+    }
+  },
+  "4": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "nobg_left",
+      "images": [
+        "2",
+        1
+      ]
+    },
+    "_meta": {
+      "title": "3. Save Left Image"
+    }
+  },
+  "5": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "nobg_right",
+      "images": [
+        "2",
+        2
+      ]
+    },
+    "_meta": {
+      "title": "3. Save Right Image"
+    }
+  },
+  "6": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "nobg_back",
+      "images": [
+        "2",
+        3
+      ]
+    },
+    "_meta": {
+      "title": "3. Save Back Image"
+    }
+  },
+  "7": {
+    "class_type": "AssetFactory_ExportCleanedFolderZip",
+    "inputs": {
+      "folder_name": "cleaned_multiview_views",
+      "custom_output_dir": "C:\\Users\\datam\\Downloads\\jace0_limpios",
+      "create_zip": false,
+      "FRONT_IMAGE": [
+        "2",
+        0
+      ],
+      "LEFT_IMAGE": [
+        "2",
+        1
+      ],
+      "RIGHT_IMAGE": [
+        "2",
+        2
+      ],
+      "BACK_IMAGE": [
+        "2",
+        3
+      ]
+    },
+    "_meta": {
+      "title": "4. Save Cleaned Folder (No ZIP)"
+    }
+  }
+}

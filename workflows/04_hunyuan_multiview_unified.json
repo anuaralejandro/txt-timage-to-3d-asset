@@ -38,16 +38,16 @@
   "5": {
     "inputs": {
       "front": [
-        "1",
+        "99",
         0
       ],
       "left": [
-        "2",
-        0
+        "99",
+        1
       ],
       "back": [
-        "3",
-        0
+        "99",
+        3
       ]
     },
     "class_type": "Hunyuan3Dv2ConditioningMultiView",
@@ -59,8 +59,8 @@
     "inputs": {
       "model": "tencent/Hunyuan3D-2mv",
       "subfolder": "hunyuan3d-dit-v2-mv",
-      "num_inference_steps": 30,
-      "guidance_scale": 7.0,
+      "num_inference_steps": 8,
+      "guidance_scale": 1.0,
       "seed": 11,
       "latent": [
         "4",
@@ -102,6 +102,41 @@
     "class_type": "voxel_to_mesh",
     "_meta": {
       "title": "Voxel to Mesh Export"
+    }
+  },
+  "9": {
+    "inputs": {
+      "mesh": [
+        "8",
+        0
+      ],
+      "filename_prefix": "3d/ComfyUI_Unified"
+    },
+    "class_type": "SaveGLB",
+    "_meta": {
+      "title": "Save 3D Model"
+    }
+  },
+  "99": {
+    "inputs": {
+      "force_remove": true,
+      "alpha_matting": true,
+      "FRONT_IMAGE": [
+        "1",
+        0
+      ],
+      "LEFT_IMAGE": [
+        "2",
+        0
+      ],
+      "BACK_IMAGE": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "AssetFactory_RemoveMultiviewFakeBackground",
+    "_meta": {
+      "title": "Remove Fake Background (Multi-view)"
     }
   }
 }

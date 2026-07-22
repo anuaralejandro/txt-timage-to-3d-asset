@@ -18,6 +18,9 @@ from ..multiview.image_alignment import detect_extremities, validate_t_pose
 
 log = logging.getLogger(__name__)
 
+from dataclasses import dataclass
+
+@dataclass
 class PreflightConfig:
     require_true_alpha_or_uniform_background: bool = True
     reject_baked_checkerboard: bool = True
@@ -116,7 +119,7 @@ class PreflightRunner:
             else:
                 is_t_pose, ratio = validate_t_pose(ext, w, h)
                 checks.append(PreflightCheck(
-                    check=PreflightFailure.POOR_POSE_ALIGNMENT,
+                    check=PreflightFailure.INCONSISTENT_VIEWS,
                     passed=ratio >= self.config.min_span_ratio,
                     message=f"T-pose span ratio {ratio:.2f} (threshold {self.config.min_span_ratio})",
                     severity=SeverityLevel.ERROR if ratio < self.config.min_span_ratio else SeverityLevel.INFO,

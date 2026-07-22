@@ -105,5 +105,18 @@
     "_meta": {
       "title": "Voxel to Mesh Export"
     }
+  },
+  "9": {
+    "inputs": {
+      "mesh": [
+        "8",
+        0
+      ],
+      "filename_prefix": "3d/ComfyUI"
+    },
+    "class_type": "SaveGLB",
+    "_meta": {
+      "title": "Save 3D Model"
+    }
   }
 }
