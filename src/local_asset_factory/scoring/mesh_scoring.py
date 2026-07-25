@@ -56,33 +56,44 @@ def render_mesh_views(mesh: trimesh.Trimesh, resolution=(512, 512)) -> Dict[str,
 
 def extract_mesh_metrics(mesh: trimesh.Trimesh) -> Dict[str, float]:
     """Extracts genuine geometric properties from a trimesh."""
+    num_verts = len(mesh.vertices) if hasattr(mesh, 'vertices') else 0
+    num_faces = len(mesh.faces) if hasattr(mesh, 'faces') else 0
+    
     metrics = {
-        "vertices": float(len(mesh.vertices)),
-        "faces": float(len(mesh.faces)),
-        "surface_area": float(mesh.area) if hasattr(mesh, 'area') else 0.0,
-        "is_watertight": float(mesh.is_watertight),
-        "degenerate_faces": float(len(mesh.faces) - len(mesh.nondegenerate_faces())),
+        "vertices": float(num_verts),
+        "faces": float(num_faces),
+        "surface_area": float(mesh.area) if (hasattr(mesh, 'area') and num_verts > 0) else 0.0,
+        "is_watertight": float(mesh.is_watertight) if (hasattr(mesh, 'is_watertight') and num_verts > 0) else 0.0,
+        "degenerate_faces": float(num_faces - len(mesh.nondegenerate_faces())) if (hasattr(mesh, 'nondegenerate_faces') and num_faces > 0) else 0.0,
     }
     
     # Calculate finite vertices ratio
-    if len(mesh.vertices) > 0:
+    if num_verts > 0:
         finite_verts = np.sum(np.isfinite(mesh.vertices).all(axis=1))
-        metrics["finite_vertices_ratio"] = float(finite_verts) / len(mesh.vertices)
+        metrics["finite_vertices_ratio"] = float(finite_verts) / num_verts
     else:
         metrics["finite_vertices_ratio"] = 0.0
 
     # Calculate main component ratio
-    components = mesh.split(only_watertight=False)
-    metrics["connected_components"] = float(len(components))
-    
-    if len(components) > 0:
-        main_comp = max(components, key=lambda c: len(c.faces))
-        metrics["main_component_face_ratio"] = float(len(main_comp.faces)) / len(mesh.faces)
+    if num_verts > 0:
+        components = mesh.split(only_watertight=False)
+        metrics["connected_components"] = float(len(components))
+        
+        if len(components) > 0:
+            main_comp = max(components, key=lambda c: len(c.faces))
+            metrics["main_component_face_ratio"] = float(len(main_comp.faces)) / num_faces if num_faces > 0 else 0.0
+        else:
+            metrics["main_component_face_ratio"] = 0.0
     else:
+        metrics["connected_components"] = 0.0
         metrics["main_component_face_ratio"] = 0.0
         
     # Extents
-    extents = mesh.extents
+    if num_verts > 0 and hasattr(mesh, 'extents') and mesh.extents is not None:
+        extents = mesh.extents
+    else:
+        extents = np.array([0.0, 0.0, 0.0])
+
     metrics["extent_x"] = float(extents[0])
     metrics["extent_y"] = float(extents[1])
     metrics["extent_z"] = float(extents[2])
@@ -95,28 +106,46 @@ def extract_mesh_metrics(mesh: trimesh.Trimesh) -> Dict[str, float]:
 def check_hard_gates(metrics: Dict[str, float]) -> List[str]:
     """
     Checks the generated metrics against the minimum required thresholds.
+    Supports both low-level geometric mesh metrics and high-level semantic quality gates.
     """
     failed = []
     
-    if metrics.get("vertices", 0) < 1000:
+    # Geometric mesh gates (only checked if vertices/faces key present)
+    if "vertices" in metrics and metrics.get("vertices", 0) < 1000:
         failed.append("insufficient_vertices")
         
-    if metrics.get("faces", 0) < 1000:
+    if "faces" in metrics and metrics.get("faces", 0) < 1000:
         failed.append("insufficient_faces")
         
-    if metrics.get("finite_vertices_ratio", 1.0) < 1.0:
+    if "finite_vertices_ratio" in metrics and metrics.get("finite_vertices_ratio", 1.0) < 1.0:
         failed.append("contains_nan_or_inf")
         
-    if metrics.get("main_component_face_ratio", 0) < 0.85:
+    if "main_component_face_ratio" in metrics and metrics.get("main_component_face_ratio", 1.0) < 0.85:
         failed.append("highly_fragmented_mesh")
         
-    if metrics.get("span_ratio", 0) < 0.2:
+    if "span_ratio" in metrics and metrics.get("span_ratio", 1.0) < 0.2:
         # 3D bounding box is too narrow, likely collapsed mesh
         failed.append("collapsed_geometry_x")
         
-    if metrics.get("extent_z", 0) < 0.1 * max(metrics.get("extent_y", 1), metrics.get("extent_x", 1)):
+    if "extent_z" in metrics and metrics.get("extent_z", 1.0) < 0.1 * max(metrics.get("extent_y", 1), metrics.get("extent_x", 1)):
         # 3D bounding box is completely flat
         failed.append("collapsed_geometry_z")
+
+    # Semantic quality gates
+    if "silhouette_iou" in metrics and metrics.get("silhouette_iou", 1.0) < 0.70:
+        failed.append("silhouette_iou_too_low")
+
+    if "has_head" in metrics and metrics.get("has_head", 1) < 1:
+        failed.append("head_missing")
+
+    if "arms_count" in metrics and metrics.get("arms_count", 2) != 2:
+        failed.append("invalid_arms_count")
+
+    if "legs_count" in metrics and metrics.get("legs_count", 2) != 2:
+        failed.append("invalid_legs_count")
+
+    if "severe_cavities" in metrics and metrics.get("severe_cavities", 0) > 0:
+        failed.append("severe_cavities_detected")
         
     return failed
 

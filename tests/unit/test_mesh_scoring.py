@@ -20,7 +20,7 @@ def test_extract_mesh_metrics_nan_inf():
         [np.inf, 1, 1]
     ])
     faces = np.array([[0, 1, 2], [1, 2, 3]])
-    mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+    mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=False, validate=False)
     
     metrics = extract_mesh_metrics(mesh)
     assert metrics["finite_vertices_ratio"] == 0.5 # 2 out of 4 are finite

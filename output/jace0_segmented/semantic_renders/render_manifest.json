@@ -1,0 +1,95 @@
+{
+  "glb_path": "C:\\Users\\datam\\Downloads\\jace0_clean_no_droplets.glb",
+  "face_count": 92556,
+  "resolution": 768,
+  "views": [
+    {
+      "view_name": "front",
+      "rgb_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front\\rgb.png",
+      "depth_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front\\depth.npy",
+      "normals_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front\\normals.npy",
+      "face_id_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front\\face_id.npy",
+      "camera_json_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front\\camera.json",
+      "view_angle_deg": 0.0,
+      "is_front": true,
+      "is_back": false
+    },
+    {
+      "view_name": "front_left",
+      "rgb_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front_left\\rgb.png",
+      "depth_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front_left\\depth.npy",
+      "normals_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front_left\\normals.npy",
+      "face_id_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front_left\\face_id.npy",
+      "camera_json_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front_left\\camera.json",
+      "view_angle_deg": 45.0,
+      "is_front": false,
+      "is_back": false
+    },
+    {
+      "view_name": "left",
+      "rgb_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\left\\rgb.png",
+      "depth_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\left\\depth.npy",
+      "normals_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\left\\normals.npy",
+      "face_id_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\left\\face_id.npy",
+      "camera_json_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\left\\camera.json",
+      "view_angle_deg": 90.0,
+      "is_front": false,
+      "is_back": false
+    },
+    {
+      "view_name": "back_left",
+      "rgb_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back_left\\rgb.png",
+      "depth_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back_left\\depth.npy",
+      "normals_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back_left\\normals.npy",
+      "face_id_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back_left\\face_id.npy",
+      "camera_json_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back_left\\camera.json",
+      "view_angle_deg": 135.0,
+      "is_front": false,
+      "is_back": false
+    },
+    {
+      "view_name": "back",
+      "rgb_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back\\rgb.png",
+      "depth_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back\\depth.npy",
+      "normals_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back\\normals.npy",
+      "face_id_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back\\face_id.npy",
+      "camera_json_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back\\camera.json",
+      "view_angle_deg": 180.0,
+      "is_front": false,
+      "is_back": true
+    },
+    {
+      "view_name": "back_right",
+      "rgb_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back_right\\rgb.png",
+      "depth_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back_right\\depth.npy",
+      "normals_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back_right\\normals.npy",
+      "face_id_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back_right\\face_id.npy",
+      "camera_json_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\back_right\\camera.json",
+      "view_angle_deg": 225.0,
+      "is_front": false,
+      "is_back": false
+    },
+    {
+      "view_name": "right",
+      "rgb_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\right\\rgb.png",
+      "depth_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\right\\depth.npy",
+      "normals_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\right\\normals.npy",
+      "face_id_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\right\\face_id.npy",
+      "camera_json_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\right\\camera.json",
+      "view_angle_deg": 270.0,
+      "is_front": false,
+      "is_back": false
+    },
+    {
+      "view_name": "front_right",
+      "rgb_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front_right\\rgb.png",
+      "depth_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front_right\\depth.npy",
+      "normals_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front_right\\normals.npy",
+      "face_id_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front_right\\face_id.npy",
+      "camera_json_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\jace0_segmented\\semantic_renders\\views\\front_right\\camera.json",
+      "view_angle_deg": 315.0,
+      "is_front": false,
+      "is_back": false
+    }
+  ]
+}

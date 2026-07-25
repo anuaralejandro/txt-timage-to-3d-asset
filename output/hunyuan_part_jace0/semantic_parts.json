@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "source_glb": "C:\\Users\\datam\\Downloads\\jace0_clean_no_droplets.glb",
+  "segmented_glb": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\hunyuan_part_jace0\\character_segmented.glb",
+  "coordinate_system": "Y_UP_RIGHT_HANDED",
+  "labels": {
+    "0": "unassigned",
+    "1": "torso",
+    "2": "neck",
+    "3": "head",
+    "4": "hair",
+    "5": "arm_upper_L",
+    "6": "arm_lower_L",
+    "7": "arm_upper_R",
+    "8": "arm_lower_R",
+    "9": "leg_upper_L",
+    "10": "leg_lower_L",
+    "11": "leg_upper_R",
+    "12": "leg_lower_R"
+  },
+  "face_count": 92556,
+  "face_labels_path": "C:\\Users\\datam\\Videos\\ComftyUI-text-2-3d-asset-gen\\output\\hunyuan_part_jace0\\face_labels.npz",
+  "proxy_used": false,
+  "proxy_face_count": null,
+  "per_label_face_counts": {
+    "unassigned": 0,
+    "torso": 19559,
+    "neck": 0,
+    "head": 0,
+    "hair": 31968,
+    "arm_upper_L": 2866,
+    "arm_lower_L": 1838,
+    "arm_upper_R": 2713,
+    "arm_lower_R": 1894,
+    "leg_upper_L": 8363,
+    "leg_lower_L": 7431,
+    "leg_upper_R": 8493,
+    "leg_lower_R": 7431
+  },
+  "confidence_summary": {
+    "mean_confidence": 0.979999840259552
+  },
+  "warnings": [],
+  "models": {
+    "parser": "schp_lip",
+    "sam2": "sam2.1_hiera_small",
+    "pose": "dwpose"
+  },
+  "settings": {
+    "gpu_metrics": {
+      "gpu_time_ms": 2061.94384765625,
+      "peak_vram_mb": 0.0,
+      "faces_processed": 92556,
+      "device": "cuda"
+    }
+  }
+}

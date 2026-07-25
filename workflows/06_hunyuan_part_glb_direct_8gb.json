@@ -1,0 +1,76 @@
+{
+  "last_node_id": 3,
+  "last_link_id": 2,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "AssetFactory_Hunyuan3DPartSegment",
+      "pos": [100, 100],
+      "size": [380, 160],
+      "inputs": [],
+      "widgets_values": [
+        "C:\\Users\\datam\\Downloads\\jace0_clean_no_droplets.glb",
+        "8GB_Turbo"
+      ],
+      "_meta": {
+        "title": "1 · Hunyuan3D-Part GPU 3D Segmentation (PyTorch CUDA)"
+      },
+      "outputs": [
+        {
+          "name": "SEGMENTED_GLB_PATH",
+          "type": "STRING",
+          "links": [],
+          "slot_index": 0
+        },
+        {
+          "name": "COLORED_GLB_PATH",
+          "type": "STRING",
+          "links": [1],
+          "slot_index": 1
+        },
+        {
+          "name": "MANIFEST_JSON_PATH",
+          "type": "STRING",
+          "links": [],
+          "slot_index": 2
+        },
+        {
+          "name": "STATUS",
+          "type": "STRING",
+          "links": [],
+          "slot_index": 3
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "AssetFactory_Preview3D",
+      "pos": [520, 100],
+      "size": [400, 300],
+      "inputs": [
+        {
+          "name": "model_path",
+          "type": "STRING",
+          "link": 1
+        }
+      ],
+      "widgets_values": [],
+      "_meta": {
+        "title": "2 · Visor 3D Interactivo (Colores Semánticos)"
+      },
+      "outputs": []
+    }
+  ],
+  "links": [
+    [1, 1, 1, 2, 0, "STRING"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1.0,
+      "offset": [0, 0]
+    }
+  },
+  "version": 0.4
+}

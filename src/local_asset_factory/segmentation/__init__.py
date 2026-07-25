@@ -1,0 +1,48 @@
+"""
+local_asset_factory · segmentation
+3D Anatomical Segmentation and Multiview Texture Projection package.
+"""
+
+from .labels import SemanticLabel, LABEL_NAMES, LABEL_COLORS_RGB, resolve_anatomical_side
+from .config import SegmentationConfig
+from .contracts import SemanticPartsManifest, ViewRenderInfo, PoseDetectionResult
+from .memory import ModelLifecycleManager
+from .proxy import ProxyManager
+from .semantic_renderer import SemanticRenderer
+from .human_parser_backend import MockHumanParser, SCHPLIPHumanParser, ParserResult
+from .pose_backend import MockPoseBackend, DWPoseBackend
+from .sam2_backend import MockSAM2Backend, SAM2HieraSmallBackend
+from .p3sam_backend import MockP3SAMBackend, P3SAMSonataBackend
+from .fusion import SemanticFusionEngine
+from .postprocess import SegmentationPostProcessor
+from .neck_inference import NeckInferencer
+from .export import SemanticExporter
+from .texture_projection import MultiviewTextureProjector
+
+__all__ = [
+    "SemanticLabel",
+    "LABEL_NAMES",
+    "LABEL_COLORS_RGB",
+    "resolve_anatomical_side",
+    "SegmentationConfig",
+    "SemanticPartsManifest",
+    "ViewRenderInfo",
+    "PoseDetectionResult",
+    "ModelLifecycleManager",
+    "ProxyManager",
+    "SemanticRenderer",
+    "MockHumanParser",
+    "SCHPLIPHumanParser",
+    "ParserResult",
+    "MockPoseBackend",
+    "DWPoseBackend",
+    "MockSAM2Backend",
+    "SAM2HieraSmallBackend",
+    "MockP3SAMBackend",
+    "P3SAMSonataBackend",
+    "SemanticFusionEngine",
+    "SegmentationPostProcessor",
+    "NeckInferencer",
+    "SemanticExporter",
+    "MultiviewTextureProjector",
+]
