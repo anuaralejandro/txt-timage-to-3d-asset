@@ -1,0 +1,14 @@
+{
+  "num_faces": 92556,
+  "num_verts": 46280,
+  "labels_summary": {
+    "torso": 45250,
+    "neck": 8911,
+    "head": 11948,
+    "upper_arm_R": 2,
+    "thigh_L": 9281,
+    "lower_leg_L": 4115,
+    "thigh_R": 9014,
+    "lower_leg_R": 4035
+  }
+}

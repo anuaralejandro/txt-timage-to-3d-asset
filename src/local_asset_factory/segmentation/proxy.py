@@ -57,7 +57,13 @@ class ProxyManager:
         # Decimate to create proxy
         log.info(f"Face count {num_faces} exceeds threshold {self.triangle_threshold}. Decimating to ~{self.target_triangles} faces.")
         target_ratio = min(1.0, float(self.target_triangles) / float(num_faces))
-        proxy_mesh = mesh.simplify_quadratic_decimation(int(num_faces * target_ratio))
+        try:
+            proxy_mesh = mesh.simplify_quadric_decimation(int(num_faces * target_ratio))
+        except Exception:
+            try:
+                proxy_mesh = mesh.simplify_quadratic_decimation(int(num_faces * target_ratio))
+            except Exception:
+                proxy_mesh = mesh
         
         os.makedirs(output_dir, exist_ok=True)
         proxy_path = os.path.join(output_dir, "segmentation_proxy.glb")

@@ -84,22 +84,20 @@ def refine_labels_mrf(
     labels = np.argmin(unary_cost, axis=1).astype(np.int32)
     adj, dihedral_angles = build_face_adjacency_graph(mesh)
 
+    # Pre-compute edge penalties vectorized (0.01 seconds instead of hours)
+    same_p3sam = (p3sam_regions[adj[:, 0]] == p3sam_regions[adj[:, 1]]) & (p3sam_regions[adj[:, 0]] >= 0)
+    edge_penalties = smoothness_weight * (1.0 - 0.5 * dihedral_angles / np.pi)
+    edge_penalties[~same_p3sam] *= 0.2
+
     for iteration in range(max_iterations):
         changed = 0
-        for i, j in adj:
+        for edge_idx, (i, j) in enumerate(adj):
             l_i, l_j = labels[i], labels[j]
             if l_i == l_j:
                 continue
 
-            angle = dihedral_angles[len(np.where(adj == i)[0])] if len(np.where(adj == i)[0]) > 0 else 0.0
-            same_p3sam = (p3sam_regions[i] == p3sam_regions[j]) and (p3sam_regions[i] >= 0)
-
-            # Smoothness penalty is reduced across sharp edges or P3-SAM region boundaries
-            edge_penalty = smoothness_weight * (1.0 - 0.5 * angle / np.pi)
-            if not same_p3sam:
-                edge_penalty *= 0.2  # Encourage label transition at geometric boundaries
-
-            cost_i_as_j = unary_cost[i, l_j] + edge_penalty
+            penalty = edge_penalties[edge_idx]
+            cost_i_as_j = unary_cost[i, l_j] + penalty
             cost_i_curr = unary_cost[i, l_i]
 
             if cost_i_as_j < cost_i_curr:

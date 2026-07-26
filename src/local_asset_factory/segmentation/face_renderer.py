@@ -28,9 +28,9 @@ def decode_face_id_map(face_id_img_path: str) -> np.ndarray:
         raise FileNotFoundError(f"Face ID map image not found at '{face_id_img_path}'")
 
     img = Image.open(face_id_img_path).convert("RGB")
-    arr = np.array(img, dtype=np.uint32)
+    arr = np.array(img, dtype=np.int64)
     # 24-bit RGB decoding: R + G*256 + B*65536 - 1
-    face_ids = arr[:, :, 0] + (arr[:, :, 1] << 8) + (arr[:, :, 2] << 16) - 1
+    face_ids = (arr[:, :, 0] + (arr[:, :, 1] << 8) + (arr[:, :, 2] << 16)) - 1
     # Handle background (white 255,255,255 or 0)
     bg_mask = (arr[:, :, 0] == 255) & (arr[:, :, 1] == 255) & (arr[:, :, 2] == 255)
     face_ids[bg_mask] = -1
