@@ -18,6 +18,10 @@ from .postprocess import SegmentationPostProcessor
 from .neck_inference import NeckInferencer
 from .export import SemanticExporter
 from .texture_projection import MultiviewTextureProjector
+from .face_renderer import FaceViewRenderer, decode_face_id_map
+from .sapiens_backend import SapiensSegmentor, SapiensResult
+from .skeleton_backend import GeometryJointPredictor, compute_bone_priors
+from .graph_optimization import fuse_anatomical_signals, refine_labels_mrf, transfer_labels_proxy_to_full
 
 __all__ = [
     "SemanticLabel",
@@ -45,4 +49,13 @@ __all__ = [
     "NeckInferencer",
     "SemanticExporter",
     "MultiviewTextureProjector",
+    "FaceViewRenderer",
+    "decode_face_id_map",
+    "SapiensSegmentor",
+    "SapiensResult",
+    "GeometryJointPredictor",
+    "compute_bone_priors",
+    "fuse_anatomical_signals",
+    "refine_labels_mrf",
+    "transfer_labels_proxy_to_full",
 ]

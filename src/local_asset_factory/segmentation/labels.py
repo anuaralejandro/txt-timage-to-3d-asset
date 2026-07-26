@@ -14,28 +14,38 @@ class SemanticLabel(IntEnum):
     HAIR = 4
     ARM_UPPER_L = 5
     ARM_LOWER_L = 6
-    ARM_UPPER_R = 7
-    ARM_LOWER_R = 8
-    LEG_UPPER_L = 9
-    LEG_LOWER_L = 10
-    LEG_UPPER_R = 11
-    LEG_LOWER_R = 12
+    HAND_L = 7
+    ARM_UPPER_R = 8
+    ARM_LOWER_R = 9
+    HAND_R = 10
+    LEG_UPPER_L = 11
+    LEG_LOWER_L = 12
+    FOOT_L = 13
+    LEG_UPPER_R = 14
+    LEG_LOWER_R = 15
+    FOOT_R = 16
+    OTHER = 17
 
 # Human-readable names map
 LABEL_NAMES: Dict[int, str] = {
-    SemanticLabel.UNASSIGNED: "unassigned",
+    SemanticLabel.UNASSIGNED: "other",
     SemanticLabel.TORSO: "torso",
     SemanticLabel.NECK: "neck",
     SemanticLabel.HEAD: "head",
     SemanticLabel.HAIR: "hair",
-    SemanticLabel.ARM_UPPER_L: "arm_upper_L",
-    SemanticLabel.ARM_LOWER_L: "arm_lower_L",
-    SemanticLabel.ARM_UPPER_R: "arm_upper_R",
-    SemanticLabel.ARM_LOWER_R: "arm_lower_R",
-    SemanticLabel.LEG_UPPER_L: "leg_upper_L",
-    SemanticLabel.LEG_LOWER_L: "leg_lower_L",
-    SemanticLabel.LEG_UPPER_R: "leg_upper_R",
-    SemanticLabel.LEG_LOWER_R: "leg_lower_R",
+    SemanticLabel.ARM_UPPER_L: "upper_arm_L",
+    SemanticLabel.ARM_LOWER_L: "lower_arm_L",
+    SemanticLabel.HAND_L: "hand_L",
+    SemanticLabel.ARM_UPPER_R: "upper_arm_R",
+    SemanticLabel.ARM_LOWER_R: "lower_arm_R",
+    SemanticLabel.HAND_R: "hand_R",
+    SemanticLabel.LEG_UPPER_L: "thigh_L",
+    SemanticLabel.LEG_LOWER_L: "lower_leg_L",
+    SemanticLabel.FOOT_L: "foot_L",
+    SemanticLabel.LEG_UPPER_R: "thigh_R",
+    SemanticLabel.LEG_LOWER_R: "lower_leg_R",
+    SemanticLabel.FOOT_R: "foot_R",
+    SemanticLabel.OTHER: "other",
 }
 
 NAME_TO_LABEL: Dict[str, SemanticLabel] = {
@@ -45,18 +55,23 @@ NAME_TO_LABEL: Dict[str, SemanticLabel] = {
 # RGB Color palette for debug GLB rendering and preview overlays (normalized 0.0 - 1.0)
 LABEL_COLORS_RGB: Dict[int, Tuple[float, float, float]] = {
     SemanticLabel.UNASSIGNED: (0.4, 0.4, 0.4),  # Gray
-    SemanticLabel.TORSO: (0.55, 0.48, 0.45),    # Brownish Gray (Dorso)
-    SemanticLabel.NECK: (0.55, 0.48, 0.45),     # Match Torso
-    SemanticLabel.HEAD: (0.95, 0.85, 0.2),      # Yellow (Cabeza/Cabello)
-    SemanticLabel.HAIR: (0.95, 0.85, 0.2),      # Yellow
-    SemanticLabel.ARM_UPPER_L: (0.4, 0.1, 0.5), # Dark Purple (Brazos)
-    SemanticLabel.ARM_UPPER_R: (0.4, 0.1, 0.5), # Dark Purple
-    SemanticLabel.ARM_LOWER_L: (0.85, 0.35, 0.35), # Pastel Red (Antebrazos)
-    SemanticLabel.ARM_LOWER_R: (0.85, 0.35, 0.35), # Pastel Red
-    SemanticLabel.LEG_UPPER_L: (0.2, 0.5, 0.25),   # Dark Green (Muslos)
-    SemanticLabel.LEG_UPPER_R: (0.2, 0.5, 0.25),   # Dark Green
-    SemanticLabel.LEG_LOWER_L: (0.6, 0.4, 0.8),    # Light Purple (Piernas)
-    SemanticLabel.LEG_LOWER_R: (0.6, 0.4, 0.8),    # Light Purple
+    SemanticLabel.TORSO: (0.55, 0.48, 0.45),    # Brownish Gray
+    SemanticLabel.NECK: (0.7, 0.6, 0.5),       # Neck Skin
+    SemanticLabel.HEAD: (0.95, 0.85, 0.2),      # Yellow (Head)
+    SemanticLabel.HAIR: (0.9, 0.7, 0.1),       # Gold (Hair)
+    SemanticLabel.ARM_UPPER_L: (0.4, 0.1, 0.5), # Dark Purple
+    SemanticLabel.ARM_LOWER_L: (0.85, 0.35, 0.35), # Pastel Red
+    SemanticLabel.HAND_L: (0.95, 0.5, 0.5),    # Light Red/Pink
+    SemanticLabel.ARM_UPPER_R: (0.5, 0.15, 0.6), # Dark Violet
+    SemanticLabel.ARM_LOWER_R: (0.9, 0.4, 0.4),   # Coral Red
+    SemanticLabel.HAND_R: (0.95, 0.6, 0.6),    # Soft Pink
+    SemanticLabel.LEG_UPPER_L: (0.2, 0.5, 0.25),   # Dark Green
+    SemanticLabel.LEG_LOWER_L: (0.6, 0.4, 0.8),    # Light Purple
+    SemanticLabel.FOOT_L: (0.75, 0.5, 0.9),     # Magenta
+    SemanticLabel.LEG_UPPER_R: (0.25, 0.55, 0.3),  # Emerald Green
+    SemanticLabel.LEG_LOWER_R: (0.65, 0.45, 0.85), # Violet
+    SemanticLabel.FOOT_R: (0.8, 0.55, 0.95),    # Soft Purple
+    SemanticLabel.OTHER: (0.3, 0.3, 0.3),      # Dark Gray
 }
 
 # RGB Color palette in 0-255 uint8 format for 2D image overlays
