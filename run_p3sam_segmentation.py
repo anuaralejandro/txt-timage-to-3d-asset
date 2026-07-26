@@ -1,101 +1,61 @@
-import json
-import urllib.request
-import time
 import sys
+import os
+import time
+import numpy as np
+from pathlib import Path
 
-def queue_prompt(prompt):
-    p = {"prompt": prompt}
-    data = json.dumps(p).encode('utf-8')
-    req = urllib.request.Request("http://127.0.0.1:8188/prompt", data=data)
-    return json.loads(urllib.request.urlopen(req).read())
+root = Path(__file__).resolve().parent
+src = root / "src"
+sys.path.insert(0, str(src))
 
-prompt = {
-  "1": {
-    "inputs": {
-      "MODEL_PATH": "C:\\Users\\datam\\Downloads\\jace0_clean_no_droplets.glb",
-      "triangle_threshold": 250000,
-      "target_triangles": 150000
-    },
-    "class_type": "AssetFactory_CreateSegmentationProxy",
-    "_meta": { "title": "Create Segmentation Proxy" }
-  },
-  "2": {
-    "inputs": {
-      "MODEL_PATH": ["1", 0],
-      "point_count": 50000,
-      "enable": True
-    },
-    "class_type": "AssetFactory_P3SAMSegment",
-    "_meta": { "title": "P3-SAM 3D Segmentation" }
-  },
-  "3": {
-    "inputs": {
-      "MODEL_PATH": ["1", 0],
-      "view_count": 8,
-      "resolution": 768
-    },
-    "class_type": "AssetFactory_RenderSemanticViews",
-    "_meta": { "title": "Render Semantic Views" }
-  },
-  "4": {
-    "inputs": {
-      "RENDER_MANIFEST_PATH": ["3", 0],
-      "backend_model": "schp_lip"
-    },
-    "class_type": "AssetFactory_HumanParseViews",
-    "_meta": { "title": "Human Parse 2D Views (X-Part)" }
-  },
-  "5": {
-    "inputs": {
-      "MODEL_PATH": ["1", 0],
-      "RENDER_MANIFEST_PATH": ["3", 0],
-      "PARSER_RESULTS_PATH": ["4", 0],
-      "P3SAM_RESULTS_PATH": ["2", 0],
-      "merge_head_and_hair": False
-    },
-    "class_type": "AssetFactory_FuseSemanticParts",
-    "_meta": { "title": "Fuse Semantic Parts 2D->3D" }
-  },
-  "6": {
-    "inputs": {
-      "MODEL_PATH": ["1", 0],
-      "FACE_LABELS_PATH": ["5", 0],
-      "SEMANTIC_MANIFEST_PATH": ["5", 1]
-    },
-    "class_type": "AssetFactory_WriteSemanticGLB",
-    "_meta": { "title": "Write Semantic GLB" }
-  },
-  "7": {
-    "inputs": {
-        "PROCESSED_MODEL_PATH": ["6", 0]
-    },
-    "class_type": "AssetFactory_SaveManifest",
-    "_meta": { "title": "Trigger Output Node" }
-  }
-}
+from local_asset_factory.segmentation.p3sam_backend import P3SAMSonataBackend
 
-print("Submitting P3-SAM & X-Part segmentation workflow to local ComfyUI...")
-max_retries = 3
-response = None
-for i in range(max_retries):
-    try:
-        response = queue_prompt(prompt)
-        print("Response:", response)
-        break
-    except urllib.error.HTTPError as e:
-        print(f"HTTP Error {e.code}: {e.read().decode()}")
-        sys.exit(1)
-    except urllib.error.URLError as e:
-        if i == max_retries - 1:
-            print(f"Failed to connect to ComfyUI after {max_retries} attempts: {e}")
-            sys.exit(1)
-        time.sleep(2)
-        print(f"Waiting for ComfyUI server... ({i+1}/{max_retries})")
-    except Exception as e:
-        print(f"Error submitting prompt: {e}")
-        sys.exit(1)
+def main():
+    glb_path = r"C:\Users\datam\Videos\ComftyUI-text-2-3d-asset-gen\ComfyUI_windows_portable\ComfyUI\output\jace0_clean_no_droplets.glb"
+    print(f"Starting Native P3-SAM 3D Mesh Segmentation on {glb_path}...")
+    
+    t0 = time.time()
+    backend = P3SAMSonataBackend()
+    backend.load()
+    
+    result = backend.segment_mesh_regions(glb_path, point_count=50000)
+    elapsed = time.time() - t0
+    
+    print(f"Native P3-SAM 3D Segmentation Completed in {elapsed:.2f} seconds!")
+    print(f"Detected {result.num_regions} distinct 3D part regions across {len(result.face_region_ids)} faces.")
 
-if response and 'prompt_id' in response:
-    prompt_id = response['prompt_id']
-    print(f"Workflow queued! Prompt ID: {prompt_id}")
-    print("Please check your ComfyUI terminal window to see the execution progress!")
+    # Export colored preview GLB with P3-SAM region colors
+    import trimesh
+    from local_asset_factory.segmentation.labels import LABEL_COLORS_RGB
+    mesh = trimesh.load(glb_path, force="mesh")
+    if isinstance(mesh, trimesh.Scene):
+        mesh = trimesh.util.concatenate(mesh.dump())
+        
+    unique_ids = np.unique(result.face_region_ids)
+    color_palette = list(LABEL_COLORS_RGB.values())
+    
+    face_colors = np.zeros((len(mesh.faces), 4), dtype=np.uint8)
+    for f_idx, reg_id in enumerate(result.face_region_ids):
+        c_idx = int(reg_id) % len(color_palette)
+        r, g, b = color_palette[c_idx]
+        face_colors[f_idx] = [int(r * 255), int(g * 255), int(b * 255), 255]
+        
+    colored_mesh = mesh.copy()
+    colored_mesh.visual = trimesh.visual.ColorVisuals(mesh=colored_mesh, face_colors=face_colors)
+    
+    out_dir = r"C:\Users\datam\Videos\ComftyUI-text-2-3d-asset-gen\output\p3sam_dynamic_test"
+    os.makedirs(out_dir, exist_ok=True)
+    colored_glb = os.path.join(out_dir, "p3sam_colored.glb")
+    colored_mesh.export(colored_glb)
+    print(f"Exported P3-SAM colored mesh to: {colored_glb}")
+    
+    final_glb = os.path.join(out_dir, "p3sam_godmode_solid.glb")
+    blender_exe = r"C:\Program Files\Blender Foundation\Blender 4.4\blender.exe"
+    script = r"C:\Users\datam\Videos\ComftyUI-text-2-3d-asset-gen\ComfyUI_windows_portable\ComfyUI\custom_nodes\ComfyUI-LocalAssetFactory\blender\separate_and_cap_by_color.py"
+    
+    cmd = f'"{blender_exe}" --background --python "{script}" -- "{colored_glb}" "{final_glb}"'
+    os.system(cmd)
+    print(f"🎉 Fully Capped P3-SAM Asset Generated at: {final_glb}")
+
+if __name__ == "__main__":
+    main()

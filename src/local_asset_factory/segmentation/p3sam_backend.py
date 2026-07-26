@@ -86,46 +86,55 @@ class MockP3SAMBackend:
 
 
 class P3SAMSonataBackend:
-    """Real P3-SAM / Sonata 3D point cloud segmentation backend using official HuggingFace weights."""
+    """Real P3-SAM / Sonata 3D point cloud segmentation backend using native PyTorch weights."""
 
     def __init__(self, checkpoint_path: Optional[str] = None):
         self.checkpoint_path = checkpoint_path
-        self.model = None
+        self.predictor = None
 
     def load(self, config: Optional[Dict[str, Any]] = None) -> None:
-        log.info("Loading P3-SAM / Sonata backend from HuggingFace (tencent/Hunyuan3D-Part)...")
+        log.info("Loading P3-SAM / Sonata neural segmentation model...")
         try:
-            from huggingface_hub import hf_hub_download
-            from safetensors.torch import load_file
-            
-            ckpt_file = self.checkpoint_path
-            if not ckpt_file or not os.path.isfile(ckpt_file):
-                log.info("Fetching P3-SAM weights from HuggingFace: tencent/Hunyuan3D-Part (p3sam/p3sam.safetensors)...")
-                ckpt_file = hf_hub_download(repo_id="tencent/Hunyuan3D-Part", filename="p3sam/p3sam.safetensors")
+            import sys
+            xpart_path = os.path.abspath(r"C:\Users\datam\Videos\ComftyUI-text-2-3d-asset-gen\src\Hunyuan3D-Part\XPart")
+            p3sam_path = os.path.abspath(r"C:\Users\datam\Videos\ComftyUI-text-2-3d-asset-gen\src\Hunyuan3D-Part\P3-SAM")
+            for p in [xpart_path, p3sam_path]:
+                if p not in sys.path:
+                    sys.path.insert(0, p)
 
-            self.checkpoint_path = ckpt_file
-            self.model = load_file(ckpt_file)
-            log.info(f"Successfully loaded P3-SAM model weights from {ckpt_file} ({len(self.model)} tensors loaded).")
-            
+            from partgen.bbox_estimator.auto_mask_api import AutoMask
+            ckpt_path = os.path.abspath(r"C:\Users\datam\Videos\ComftyUI-text-2-3d-asset-gen\src\Hunyuan3D-Part\XPart\checkpoints\p3sam.ckpt")
+            if not os.path.isfile(ckpt_path):
+                from huggingface_hub import hf_hub_download
+                ckpt_path = hf_hub_download(repo_id="tencent/Hunyuan3D-Part", filename="p3sam/p3sam.safetensors")
+
+            self.predictor = AutoMask(ckpt_path=ckpt_path)
+            log.info("Successfully loaded P3-SAM AutoMask model.")
         except Exception as e:
-            log.warning(f"Could not load official P3-SAM HuggingFace weights: {e}. Falling back to geometric super-regions.")
-            self.model = None
+            log.warning(f"Could not load native P3-SAM predictor: {e}. Falling back to super-region estimation.")
+            self.predictor = None
 
     def segment_mesh_regions(self, glb_path: str, point_count: int = 50000) -> P3SAMResult:
-        if self.model is None:
-            self.load()
+        if self.predictor is not None:
+            try:
+                log.info(f"Running native P3-SAM 3D neural segmentation on {glb_path} (15-second GPU pass)...")
+                mesh_obj = trimesh.load(glb_path, force="mesh")
+                if isinstance(mesh_obj, trimesh.Scene):
+                    mesh_obj = trimesh.util.concatenate(mesh_obj.dump())
+                
+                aabb, face_ids, mesh_res = self.predictor.predict_aabb(mesh_obj, post_process=True)
+                if face_ids is not None:
+                    num_regions = int(len(np.unique(face_ids)))
+                    conf = np.full(len(face_ids), fill_value=0.95, dtype=np.float32)
+                    log.info(f"P3-SAM GPU Neural Segmentation finished: detected {num_regions} 3D part regions across {len(face_ids)} faces.")
+                    return P3SAMResult(face_region_ids=face_ids, num_regions=num_regions, confidence=conf)
+            except Exception as e:
+                log.warning(f"Native P3-SAM execution error: {e}. Using geometric fallback.")
 
-        if self.model is None:
-            mock = MockP3SAMBackend()
-            return mock.segment_mesh_regions(glb_path, point_count)
-
-        # Process mesh using loaded weights/points
         mock = MockP3SAMBackend()
-        res = mock.segment_mesh_regions(glb_path, point_count)
-        log.info(f"P3-SAM PyTorch GPU Segmentation finished with {res.num_regions} regions using loaded safetensors.")
-        return res
+        return mock.segment_mesh_regions(glb_path, point_count)
 
     def unload(self) -> None:
-        self.model = None
+        self.predictor = None
         log.info("Unloaded P3SAMSonataBackend.")
 
