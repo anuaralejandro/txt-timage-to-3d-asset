@@ -1,0 +1,379 @@
+{
+  "last_node_id": 12,
+  "last_link_id": 12,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadImage",
+      "pos": [100, 100],
+      "size": [315, 314],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [1, 5],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "C:\\Users\\datam\\Downloads\\jace0_limpios\\front.png",
+        "image"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "Trellis2LoadModel",
+      "pos": [450, 100],
+      "size": [315, 200],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "TRELLIS2_MODEL",
+          "links": [2],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Trellis2LoadModel"
+      },
+      "widgets_values": [
+        "microsoft/TRELLIS.2-4B",
+        "dinov2_vitl14_reg",
+        true,
+        "sdpa",
+        "spconv",
+        "implicit_gemm"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "Trellis2MeshWithVoxelGenerator",
+      "pos": [800, 100],
+      "size": [350, 300],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "TRELLIS2_MODEL",
+          "link": 2
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "mesh",
+          "type": "MESH",
+          "links": [3, 4],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Trellis2MeshWithVoxelGenerator"
+      },
+      "widgets_values": [
+        42,
+        7.5,
+        12,
+        3.0,
+        12,
+        0.95,
+        1024,
+        "fast",
+        "trellis2_jace0_output"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "Trellis2OvoxelExportToGLB",
+      "pos": [1200, 100],
+      "size": [300, 150],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mesh",
+          "type": "MESH",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "glb_path",
+          "type": "STRING",
+          "links": [6],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Trellis2OvoxelExportToGLB"
+      },
+      "widgets_values": [
+        "trellis2_jace0_model"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "SegviGenModelLoader",
+      "pos": [450, 450],
+      "size": [315, 120],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "SEGVIGEN_MODEL",
+          "type": "SEGVIGEN_MODEL",
+          "links": [7],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SegviGenModelLoader"
+      },
+      "widgets_values": [
+        "Aero-Ex/SegviGen",
+        "fp16"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "SegviGenImageConditioner",
+      "pos": [800, 450],
+      "size": [300, 120],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "SEGVIGEN_COND",
+          "links": [8],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SegviGenImageConditioner"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 7,
+      "type": "SegviGenMeshVoxelizer",
+      "pos": [1200, 300],
+      "size": [300, 150],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mesh",
+          "type": "MESH",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "VOXEL_GRID",
+          "type": "SEGVIGEN_VOXEL",
+          "links": [9],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SegviGenMeshVoxelizer"
+      },
+      "widgets_values": [
+        64
+      ]
+    },
+    {
+      "id": 8,
+      "type": "SegviGenSampler",
+      "pos": [1550, 300],
+      "size": [315, 200],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "SEGVIGEN_MODEL",
+          "link": 7
+        },
+        {
+          "name": "conditioning",
+          "type": "SEGVIGEN_COND",
+          "link": 8
+        },
+        {
+          "name": "voxel_grid",
+          "type": "SEGVIGEN_VOXEL",
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SEGM_LATENT",
+          "type": "SEGVIGEN_LATENT",
+          "links": [10],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SegviGenSampler"
+      },
+      "widgets_values": [
+        42,
+        30,
+        5.0
+      ]
+    },
+    {
+      "id": 9,
+      "type": "SegviGenTextureDecoder",
+      "pos": [1900, 300],
+      "size": [315, 150],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "SEGVIGEN_MODEL",
+          "link": 7
+        },
+        {
+          "name": "segm_latent",
+          "type": "SEGVIGEN_LATENT",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "name": "PART_MASK_GRID",
+          "type": "SEGVIGEN_PART_GRID",
+          "links": [11],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SegviGenTextureDecoder"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 10,
+      "type": "SegviGenMeshBaker",
+      "pos": [2250, 300],
+      "size": [315, 180],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mesh",
+          "type": "MESH",
+          "link": 4
+        },
+        {
+          "name": "part_grid",
+          "type": "SEGVIGEN_PART_GRID",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "name": "BAKED_MESH",
+          "type": "MESH",
+          "links": [12],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SegviGenMeshBaker"
+      },
+      "widgets_values": [
+        1024
+      ]
+    },
+    {
+      "id": 11,
+      "type": "SegviGenSplitRefine",
+      "pos": [2600, 300],
+      "size": [315, 200],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "baked_mesh",
+          "type": "MESH",
+          "link": 12
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SEGM_GLB_PATH",
+          "type": "STRING",
+          "links": null,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SegviGenSplitRefine"
+      },
+      "widgets_values": [
+        "jace0_segvigen_parts",
+        true
+      ]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 3, 1, "IMAGE"],
+    [2, 2, 0, 3, 0, "TRELLIS2_MODEL"],
+    [3, 3, 0, 4, 0, "MESH"],
+    [4, 3, 0, 7, 0, "MESH"],
+    [5, 1, 0, 6, 0, "IMAGE"],
+    [6, 4, 0, 4, 0, "STRING"],
+    [7, 5, 0, 8, 0, "SEGVIGEN_MODEL"],
+    [8, 6, 0, 8, 1, "SEGVIGEN_COND"],
+    [9, 7, 0, 8, 2, "SEGVIGEN_VOXEL"],
+    [10, 8, 0, 9, 1, "SEGVIGEN_LATENT"],
+    [11, 9, 0, 10, 1, "SEGVIGEN_PART_GRID"],
+    [12, 10, 0, 11, 0, "MESH"]
+  ],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}
